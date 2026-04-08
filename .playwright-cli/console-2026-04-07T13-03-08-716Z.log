@@ -1,0 +1,51 @@
+[     824ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  154208ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  172822ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  172892ms] TypeError: Cannot read properties of undefined (reading 'clientWidth')
+    at MenuScene.create (http://127.0.0.1:5173/src/phaser/scenes/MenuScene.ts?t=1775567142439:14:19)
+    at SceneManager2.create (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110790:36)
+    at SceneManager2.bootScene (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110706:28)
+    at SceneManager2.start (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:111248:26)
+    at SceneManager2.processQueue (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110567:37)
+    at SceneManager2.update (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110745:26)
+    at Game2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8625:32)
+    at TimeStep2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:9079:26)
+    at step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:16406:29)
+[  181188ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  181277ms] TypeError: Cannot read properties of undefined (reading 'clientWidth')
+    at MenuScene.create (http://127.0.0.1:5173/src/phaser/scenes/MenuScene.ts?t=1775567169703:14:19)
+    at SceneManager2.create (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110790:36)
+    at SceneManager2.bootScene (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110706:28)
+    at SceneManager2.start (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:111248:26)
+    at SceneManager2.processQueue (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110567:37)
+    at SceneManager2.update (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110745:26)
+    at Game2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8625:32)
+    at TimeStep2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:9079:26)
+    at step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:16406:29)
+[  202612ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  202804ms] TypeError: Cannot read properties of undefined (reading 'clientWidth')
+    at MenuScene.create (http://127.0.0.1:5173/src/phaser/scenes/MenuScene.ts?t=1775567191047:14:19)
+    at SceneManager2.create (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110790:36)
+    at SceneManager2.bootScene (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110706:28)
+    at SceneManager2.start (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:111248:26)
+    at SceneManager2.processQueue (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110567:37)
+    at SceneManager2.update (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110745:26)
+    at Game2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8625:32)
+    at TimeStep2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:9079:26)
+    at step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:16406:29)
+[  217187ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  217306ms] TypeError: Cannot read properties of undefined (reading 'clientWidth')
+    at MenuScene.create (http://127.0.0.1:5173/src/phaser/scenes/MenuScene.ts?t=1775567191047:14:19)
+    at SceneManager2.create (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110790:36)
+    at SceneManager2.bootScene (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110706:28)
+    at SceneManager2.start (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:111248:26)
+    at SceneManager2.processQueue (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110567:37)
+    at SceneManager2.update (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:110745:26)
+    at Game2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8625:32)
+    at TimeStep2.step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:9079:26)
+    at step (http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:16406:29)
+[  235728ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  251602ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  271468ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  317854ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456
+[  504255ms] [LOG] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://127.0.0.1:5173/node_modules/.vite/deps/phaser.js?v=4fdc457a:8456

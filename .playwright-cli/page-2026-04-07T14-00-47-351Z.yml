@@ -1,0 +1,15 @@
+- generic [ref=e3]:
+  - generic:
+    - generic:
+      - region "Current score":
+        - generic: Score
+        - strong: "0000"
+      - region "Remaining lives":
+        - generic: Lives
+  - generic [ref=e7]:
+    - paragraph [ref=e8]: Arcade Intercept
+    - heading "Asteroids" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Tap to launch
+    - paragraph
+    - button "Tap to launch" [ref=e11] [cursor=pointer]
+    - paragraph [ref=e12]: "Desktop: left and right arrows rotate, space fires. Mobile: drag to aim and fire."

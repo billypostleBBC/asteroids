@@ -21,6 +21,18 @@ app.innerHTML = `
   <div id="game-shell" class="game-shell">
     <div id="game-canvas" class="game-canvas" aria-hidden="true"></div>
     <div id="game-hud" class="hud">
+      <button
+        id="pause-toggle"
+        class="hud__pause-button"
+        type="button"
+        aria-label="Pause game"
+        hidden
+      >
+        <span class="hud__pause-icon" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+      </button>
       <div id="ship-overlay" class="hud__ship" aria-hidden="true">
         <svg viewBox="0 0 48 48" role="presentation">
           <polygon class="hud__ship-outline" points="${[
@@ -143,9 +155,20 @@ const launchGame = (): void => {
   flushPendingLaunch();
 };
 
+const toggleGamePause = (): void => {
+  if (controller.getSnapshot().mode !== 'playing') {
+    return;
+  }
+
+  escapePaused = !escapePaused;
+  input.reset();
+  syncPauseState();
+};
+
 hud.setCallbacks({
   onLaunch: launchGame,
   onRelaunch: launchGame,
+  onTogglePause: toggleGamePause,
 });
 
 const handleVisibilityChange = (): void => {
@@ -175,9 +198,7 @@ window.addEventListener('keydown', (event) => {
   }
 
   event.preventDefault();
-  escapePaused = !escapePaused;
-  input.reset();
-  syncPauseState();
+  toggleGamePause();
 });
 
 document.addEventListener('visibilitychange', handleVisibilityChange);

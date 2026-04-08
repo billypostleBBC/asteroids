@@ -40,7 +40,7 @@ export const SHIP_FIRE_INTERVAL_SCORE_STEP = 100;
 export const SHIP_FIRE_INTERVAL_MIN_MS = 140;
 export const SHIP_DAMAGE_COOLDOWN_MS = 750;
 export const LASER_SPEED = 720;
-export const LASER_TTL_MS = 900;
+export const LASER_TTL_MS = Number.POSITIVE_INFINITY;
 export const LASER_RADIUS = 8;
 
 export const ATTRACT_MODE_DIRECTOR: SpawnDirectorConfig = {

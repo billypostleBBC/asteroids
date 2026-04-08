@@ -4,6 +4,7 @@ import type { GameSnapshot } from '../game/simulation/types.ts';
 type HudCallbacks = {
   onLaunch: () => void;
   onRelaunch: () => void;
+  onTogglePause: () => void;
 };
 
 export class GameHud {
@@ -14,6 +15,7 @@ export class GameHud {
   private callbacks: HudCallbacks = {
     onLaunch: () => undefined,
     onRelaunch: () => undefined,
+    onTogglePause: () => undefined,
   };
 
   private focusPaused = false;
@@ -36,6 +38,8 @@ export class GameHud {
 
   private readonly overlayScore: HTMLParagraphElement;
 
+  private readonly pauseButton: HTMLButtonElement;
+
   private readonly resizeObserver: ResizeObserver;
 
   private readonly scoreValue: HTMLElement;
@@ -53,11 +57,14 @@ export class GameHud {
     this.overlayScore = root.querySelector<HTMLParagraphElement>('#overlay-score')!;
     this.button = root.querySelector<HTMLButtonElement>('#overlay-button')!;
     this.controls = root.querySelector<HTMLParagraphElement>('#overlay-controls')!;
+    this.pauseButton = root.querySelector<HTMLButtonElement>('#pause-toggle')!;
     this.scoreValue = root.querySelector<HTMLElement>('#score-value')!;
     this.livesValue = root.querySelector<HTMLDivElement>('#lives-value')!;
     this.shipOverlay = root.querySelector<HTMLDivElement>('#ship-overlay')!;
 
     this.button.addEventListener('click', this.handleButtonClick);
+    this.pauseButton.addEventListener('click', this.handlePauseButtonClick);
+    this.pauseButton.addEventListener('pointerdown', this.handlePauseButtonPointerDown);
     window.addEventListener('keydown', this.handleOverlayKeydown);
     this.resizeObserver = new ResizeObserver(() => {
       this.fitTitleToPanel();
@@ -71,6 +78,8 @@ export class GameHud {
 
   destroy(): void {
     this.button.removeEventListener('click', this.handleButtonClick);
+    this.pauseButton.removeEventListener('click', this.handlePauseButtonClick);
+    this.pauseButton.removeEventListener('pointerdown', this.handlePauseButtonPointerDown);
     window.removeEventListener('keydown', this.handleOverlayKeydown);
     this.resizeObserver.disconnect();
   }
@@ -79,6 +88,7 @@ export class GameHud {
     this.scoreValue.textContent = snapshot.score.toString().padStart(4, '0');
     this.renderLives(snapshot.ship.lives);
     this.renderShip(snapshot);
+    this.renderPauseButton(snapshot);
 
     if (this.gamePaused && snapshot.mode === 'playing') {
       this.renderGamePaused();
@@ -192,12 +202,23 @@ export class GameHud {
     this.kicker.textContent = 'Game Paused';
     this.setOverlayTitle('Stand By');
     this.overlayBody.textContent =
-      'The run is frozen until you press Escape again.';
+      'The run is frozen until you tap the pause icon or press Escape again.';
     this.overlayScore.textContent = '';
-    this.controls.textContent = 'Press Escape to resume.';
+    this.controls.textContent = 'Tap the pause icon to resume on mobile, or press Escape on desktop.';
     this.button.hidden = true;
     this.button.dataset.action = '';
     this.button.dataset.pulse = 'false';
+  }
+
+  private renderPauseButton(snapshot: GameSnapshot): void {
+    const visible = snapshot.mode === 'playing';
+
+    this.pauseButton.hidden = !visible;
+    this.pauseButton.setAttribute(
+      'aria-label',
+      this.gamePaused ? 'Resume game' : 'Pause game',
+    );
+    this.pauseButton.dataset.state = this.gamePaused ? 'paused' : 'playing';
   }
 
   private readonly handleButtonClick = (): void => {
@@ -209,6 +230,17 @@ export class GameHud {
     if (this.button.dataset.action === 'relaunch') {
       this.callbacks.onRelaunch();
     }
+  };
+
+  private readonly handlePauseButtonClick = (event: MouseEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    this.callbacks.onTogglePause();
+  };
+
+  private readonly handlePauseButtonPointerDown = (event: PointerEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   private readonly handleOverlayKeydown = (event: KeyboardEvent): void => {

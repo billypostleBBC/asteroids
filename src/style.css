@@ -65,6 +65,60 @@ button {
   pointer-events: none;
 }
 
+.hud__pause-button {
+  position: absolute;
+  top: calc(var(--safe-top) + 0.35rem);
+  left: max(1rem, env(safe-area-inset-left));
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid rgba(103, 180, 255, 0.32);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(8, 16, 31, 0.94) 0%, rgba(3, 8, 17, 0.9) 100%);
+  color: var(--color-text);
+  box-shadow:
+    0 0 18px rgba(23, 174, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  pointer-events: auto;
+  z-index: 3;
+  transition:
+    transform var(--overlay-duration) ease,
+    box-shadow var(--overlay-duration) ease,
+    border-color var(--overlay-duration) ease,
+    background var(--overlay-duration) ease;
+}
+
+.hud__pause-button:hover,
+.hud__pause-button:focus-visible {
+  outline: none;
+  transform: translateY(-0.05rem);
+  border-color: rgba(103, 180, 255, 0.56);
+  box-shadow:
+    0 0 22px rgba(23, 174, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.hud__pause-button[data-state='paused'] {
+  background:
+    linear-gradient(180deg, rgba(18, 32, 55, 0.98) 0%, rgba(7, 15, 29, 0.94) 100%);
+  border-color: rgba(103, 180, 255, 0.6);
+}
+
+.hud__pause-icon {
+  display: flex;
+  gap: 0.28rem;
+}
+
+.hud__pause-icon span {
+  width: 0.24rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
 .hud__ship {
   position: absolute;
   top: 50%;
@@ -181,6 +235,7 @@ button {
     calc(var(--safe-bottom) + 1rem)
     1rem;
   pointer-events: none;
+  z-index: 1;
 }
 
 .screen-overlay__panel {
@@ -299,6 +354,13 @@ button {
 }
 
 @media (max-width: 720px) {
+  .hud__pause-button {
+    top: calc(var(--safe-top) + 0.2rem);
+    left: max(0.85rem, env(safe-area-inset-left));
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
   .hud__ship {
     width: 2.85rem;
     height: 2.85rem;
@@ -342,6 +404,7 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .hud__life,
+  .hud__pause-button,
   .screen-overlay__panel,
   .screen-overlay__button {
     transition: none;

@@ -119,44 +119,6 @@ button {
   background: currentColor;
 }
 
-.hud__ship {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3.1rem;
-  height: 3.1rem;
-  color: var(--color-ship);
-  opacity: 1;
-  transform: translate(-50%, -50%);
-  transform-origin: center;
-  transition: opacity 80ms linear;
-  filter:
-    drop-shadow(0 0 1px rgba(248, 251, 255, 0.9))
-    drop-shadow(0 0 6px rgba(103, 180, 255, 0.2));
-}
-
-.hud__ship svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-  shape-rendering: geometricPrecision;
-}
-
-.hud__ship-outline {
-  fill: rgba(103, 180, 255, 0.08);
-  stroke: currentColor;
-  stroke-width: 2.75;
-  stroke-linejoin: round;
-}
-
-.hud__ship-core {
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 2.25;
-  stroke-linejoin: round;
-}
-
 .hud__cluster {
   position: absolute;
   top: calc(var(--safe-top) + 0.35rem);
@@ -359,11 +321,6 @@ button {
     left: max(0.85rem, env(safe-area-inset-left));
     width: 2.7rem;
     height: 2.7rem;
-  }
-
-  .hud__ship {
-    width: 2.85rem;
-    height: 2.85rem;
   }
 
   .hud__cluster {

@@ -33,19 +33,6 @@ app.innerHTML = `
           <span></span>
         </span>
       </button>
-      <div id="ship-overlay" class="hud__ship" aria-hidden="true">
-        <svg viewBox="0 0 48 48" role="presentation">
-          <polygon class="hud__ship-outline" points="${[
-            '24,6',
-            '40,38',
-            '27,31',
-            '24,44',
-            '21,31',
-            '8,38',
-          ].join(' ')}" />
-          <polygon class="hud__ship-core" points="24,10 29,30 19,30" />
-        </svg>
-      </div>
       <div class="hud__cluster">
         <section class="hud__panel" aria-label="Current score">
           <span class="hud__label">Score</span>

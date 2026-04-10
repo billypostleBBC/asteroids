@@ -1,3 +1,5 @@
+import Phaser from 'phaser';
+
 import {
   ASTEROID_DEFINITIONS,
   ATTRACT_MODE_DIRECTOR,
@@ -6,11 +8,14 @@ import {
   LASER_SPEED,
   LASER_TTL_MS,
   SHIP_COLLISION_RADIUS,
+  SHIP_BRAKE_ACCELERATION,
   SHIP_DAMAGE_COOLDOWN_MS,
   SHIP_FIRE_INTERVAL_MS,
   SHIP_FIRE_INTERVAL_MIN_MS,
   SHIP_FIRE_INTERVAL_SCORE_STEP,
   SHIP_FIRE_INTERVAL_STEP_MS,
+  SHIP_MAX_SPEED,
+  SHIP_THRUST_ACCELERATION,
   SHIP_TURN_ACCELERATION,
   SHIP_TURN_DRAG,
   SHIP_TURN_SPEED,
@@ -34,7 +39,10 @@ const DEFAULT_VIEWPORT: ViewportState = {
 };
 const ASTEROID_EXPLOSION_TTL_MS = 320;
 const GAME_OVER_OVERLAY_DELAY_MS = 3000;
+const MAX_MENU_ASTEROIDS = 8;
+const MAX_PLAYING_ASTEROIDS = 18;
 const SHIP_EXPLOSION_TTL_MS = 720;
+const SPAWN_COOLDOWN_WHEN_CAPPED_MS = 180;
 
 export class GameController {
   private state: InternalGameState = this.createState('menu');
@@ -126,6 +134,8 @@ export class GameController {
         damageCooldownMs,
         fireCooldownMs: 0,
         lives: 3,
+        position: origin(),
+        velocity: origin(),
       },
       spawnCooldownMs,
       spawnIntensity: 0,
@@ -144,8 +154,20 @@ export class GameController {
     if (this.state.mode === 'menu') {
       shouldFire = this.applyAutoplay(deltaMs);
     } else if (this.state.mode === 'playing') {
-      if (input.dragActive && input.dragAngle !== null) {
-        this.state.ship.angle = input.dragAngle;
+      if (input.dragActive && input.dragPosition !== null) {
+        const shipScreenPosition = {
+          x: this.state.viewport.width / 2 + this.state.ship.position.x,
+          y: this.state.viewport.height / 2 + this.state.ship.position.y,
+        };
+        const aimVector = {
+          x: input.dragPosition.x - shipScreenPosition.x,
+          y: input.dragPosition.y - shipScreenPosition.y,
+        };
+
+        if (aimVector.x !== 0 || aimVector.y !== 0) {
+          this.state.ship.angle = Math.atan2(aimVector.y, aimVector.x);
+        }
+
         this.state.ship.angularVelocity = 0;
       } else {
         const turnInput =
@@ -162,6 +184,35 @@ export class GameController {
         this.state.ship.angle +=
           this.state.ship.angularVelocity * deltaSeconds;
       }
+
+      if (input.thrust) {
+        const heading = vectorFromAngle(this.state.ship.angle);
+
+        this.state.ship.velocity.x +=
+          heading.x * SHIP_THRUST_ACCELERATION * deltaSeconds;
+        this.state.ship.velocity.y +=
+          heading.y * SHIP_THRUST_ACCELERATION * deltaSeconds;
+        this.state.ship.velocity = clampVectorMagnitude(
+          this.state.ship.velocity,
+          SHIP_MAX_SPEED,
+        );
+      }
+
+      if (input.brake) {
+        this.state.ship.velocity = moveVectorToward(
+          this.state.ship.velocity,
+          origin(),
+          SHIP_BRAKE_ACCELERATION * deltaSeconds,
+        );
+      }
+
+      this.state.ship.position.x += this.state.ship.velocity.x * deltaSeconds;
+      this.state.ship.position.y += this.state.ship.velocity.y * deltaSeconds;
+      wrapPosition(
+        this.state.ship.position,
+        SHIP_COLLISION_RADIUS,
+        this.state.viewport,
+      );
 
       this.state.ship.angle = Phaser.Math.Angle.Wrap(this.state.ship.angle);
       shouldFire = input.fire;
@@ -218,7 +269,10 @@ export class GameController {
 
   private fireProjectile(): void {
     const heading = vectorFromAngle(this.state.ship.angle);
-    const position = scaleVector(heading, 34);
+    const position = addVectors(
+      this.state.ship.position,
+      scaleVector(heading, 34),
+    );
 
     this.state.projectiles.push({
       angle: this.state.ship.angle,
@@ -226,7 +280,10 @@ export class GameController {
       position,
       radius: LASER_RADIUS,
       ttlMs: LASER_TTL_MS,
-      velocity: scaleVector(heading, LASER_SPEED),
+      velocity: addVectors(
+        this.state.ship.velocity,
+        scaleVector(heading, LASER_SPEED),
+      ),
     });
   }
 
@@ -236,6 +293,7 @@ export class GameController {
     for (const projectile of this.state.projectiles) {
       projectile.position.x += projectile.velocity.x * deltaSeconds;
       projectile.position.y += projectile.velocity.y * deltaSeconds;
+      wrapPosition(projectile.position, projectile.radius, this.state.viewport);
       projectile.ttlMs -= deltaMs;
     }
   }
@@ -247,6 +305,7 @@ export class GameController {
       asteroid.position.x += asteroid.velocity.x * deltaSeconds;
       asteroid.position.y += asteroid.velocity.y * deltaSeconds;
       asteroid.rotation += asteroid.rotationSpeed * deltaSeconds;
+      wrapPosition(asteroid.position, asteroid.radius, this.state.viewport);
     }
   }
 
@@ -324,7 +383,7 @@ export class GameController {
 
     const impactIndex = this.state.asteroids.findIndex(
       (asteroid) =>
-        distanceSquared(asteroid.position, origin()) <=
+        distanceSquared(asteroid.position, this.state.ship.position) <=
         (asteroid.radius + SHIP_COLLISION_RADIUS) ** 2,
     );
 
@@ -336,7 +395,7 @@ export class GameController {
     this.state.ship.lives -= 1;
 
     if (this.state.ship.lives <= 0) {
-      this.spawnExplosion(origin(), 74, 'ship');
+      this.spawnExplosion(this.state.ship.position, 74, 'ship');
       this.state.ship.alive = false;
       this.state.gameOverOverlayDelayMs = GAME_OVER_OVERLAY_DELAY_MS;
       this.state.mode = 'gameover';
@@ -344,6 +403,10 @@ export class GameController {
       return;
     }
 
+    this.state.ship.position = origin();
+    this.state.ship.velocity = origin();
+    this.state.ship.angle = -Math.PI / 2;
+    this.state.ship.angularVelocity = 0;
     this.state.ship.damageCooldownMs = SHIP_DAMAGE_COOLDOWN_MS;
   }
 
@@ -358,7 +421,15 @@ export class GameController {
     this.state.spawnIntensity = intensityFactor;
     this.state.spawnCooldownMs -= deltaMs;
 
-    while (this.state.spawnCooldownMs <= 0) {
+    const maxAsteroids =
+      this.state.mode === 'menu'
+        ? MAX_MENU_ASTEROIDS
+        : Math.round(lerp(10, MAX_PLAYING_ASTEROIDS, intensityFactor));
+
+    while (
+      this.state.spawnCooldownMs <= 0 &&
+      this.state.asteroids.length < maxAsteroids
+    ) {
       this.state.asteroids.push(
         this.createAsteroid(this.state.viewport, director, intensityFactor),
       );
@@ -367,6 +438,13 @@ export class GameController {
         director.intervalMs.min,
         intensityFactor,
       );
+    }
+
+    if (
+      this.state.spawnCooldownMs <= 0 &&
+      this.state.asteroids.length >= maxAsteroids
+    ) {
+      this.state.spawnCooldownMs = SPAWN_COOLDOWN_WHEN_CAPPED_MS;
     }
   }
 
@@ -377,10 +455,7 @@ export class GameController {
   ): AsteroidState {
     const size = this.pickAsteroidSize(director, intensityFactor);
     const definition = ASTEROID_DEFINITIONS[size];
-    const angle = Math.random() * Math.PI * 2;
-    const spawnRadius =
-      Math.hypot(viewport.width, viewport.height) / 2 + definition.radius + 90;
-    const position = vectorFromAngle(angle, spawnRadius);
+    const position = this.createEdgeSpawnPosition(viewport, definition.radius);
     const heading = this.createRandomScreenCrossingHeading(position, viewport);
     const speedScale = lerp(
       director.speedScale.min,
@@ -434,18 +509,8 @@ export class GameController {
   }
 
   private removeExpiredEntities(): void {
-    const maxDistance =
-      Math.hypot(this.state.viewport.width, this.state.viewport.height) / 2 + 220;
-
     this.state.projectiles = this.state.projectiles.filter(
-      (projectile) =>
-        projectile.ttlMs > 0 &&
-        distanceSquared(projectile.position, origin()) < maxDistance ** 2,
-    );
-
-    this.state.asteroids = this.state.asteroids.filter(
-      (asteroid) =>
-        distanceSquared(asteroid.position, origin()) < (maxDistance + 120) ** 2,
+      (projectile) => projectile.ttlMs > 0,
     );
     this.state.explosions = this.state.explosions.filter(
       (explosion) => explosion.ttlMs > 0,
@@ -467,6 +532,42 @@ export class GameController {
     });
   }
 
+  private createEdgeSpawnPosition(
+    viewport: ViewportState,
+    radius: number,
+  ): Vec2 {
+    const halfWidth = viewport.width / 2;
+    const halfHeight = viewport.height / 2;
+    const edgeInset = Math.max(6, radius - 6);
+    const edge = Phaser.Math.Between(0, 3);
+
+    if (edge === 0) {
+      return {
+        x: Phaser.Math.FloatBetween(-halfWidth, halfWidth),
+        y: -halfHeight - edgeInset,
+      };
+    }
+
+    if (edge === 1) {
+      return {
+        x: halfWidth + edgeInset,
+        y: Phaser.Math.FloatBetween(-halfHeight, halfHeight),
+      };
+    }
+
+    if (edge === 2) {
+      return {
+        x: Phaser.Math.FloatBetween(-halfWidth, halfWidth),
+        y: halfHeight + edgeInset,
+      };
+    }
+
+    return {
+      x: -halfWidth - edgeInset,
+      y: Phaser.Math.FloatBetween(-halfHeight, halfHeight),
+    };
+  }
+
   private createRandomScreenCrossingHeading(
     spawnPosition: Vec2,
     viewport: ViewportState,
@@ -478,7 +579,10 @@ export class GameController {
 
     const target = horizontalBias
       ? {
-          x: spawnPosition.x > 0 ? -halfWidth - targetPadding : halfWidth + targetPadding,
+          x:
+            spawnPosition.x > 0
+              ? -halfWidth - targetPadding
+              : halfWidth + targetPadding,
           y: Phaser.Math.FloatBetween(
             -halfHeight - targetPadding,
             halfHeight + targetPadding,
@@ -489,7 +593,10 @@ export class GameController {
             -halfWidth - targetPadding,
             halfWidth + targetPadding,
           ),
-          y: spawnPosition.y > 0 ? -halfHeight - targetPadding : halfHeight + targetPadding,
+          y:
+            spawnPosition.y > 0
+              ? -halfHeight - targetPadding
+              : halfHeight + targetPadding,
         };
 
     return normalizeVector({
@@ -499,8 +606,25 @@ export class GameController {
   }
 }
 
+function addVectors(a: Vec2, b: Vec2): Vec2 {
+  return {
+    x: a.x + b.x,
+    y: a.y + b.y,
+  };
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function clampVectorMagnitude(vector: Vec2, maxMagnitude: number): Vec2 {
+  const magnitude = Math.hypot(vector.x, vector.y);
+
+  if (magnitude <= maxMagnitude) {
+    return vector;
+  }
+
+  return scaleVector(vector, maxMagnitude / magnitude);
 }
 
 function distanceSquared(a: Vec2, b: Vec2): number {
@@ -517,6 +641,23 @@ function moveToward(current: number, target: number, maxDelta: number): number {
   }
 
   return current + Math.sign(target - current) * maxDelta;
+}
+
+function moveVectorToward(current: Vec2, target: Vec2, maxDelta: number): Vec2 {
+  const deltaX = target.x - current.x;
+  const deltaY = target.y - current.y;
+  const distance = Math.hypot(deltaX, deltaY);
+
+  if (distance <= maxDelta || distance === 0) {
+    return { ...target };
+  }
+
+  const scale = maxDelta / distance;
+
+  return {
+    x: current.x + deltaX * scale,
+    y: current.y + deltaY * scale,
+  };
 }
 
 function normalizeVector(vector: Vec2): Vec2 {
@@ -560,4 +701,27 @@ function vectorFromAngle(angle: number, scale = 1): Vec2 {
   };
 }
 
-import Phaser from 'phaser';
+function wrapPosition(
+  position: Vec2,
+  radius: number,
+  viewport: ViewportState,
+): void {
+  const halfWidth = viewport.width / 2;
+  const halfHeight = viewport.height / 2;
+  const maxX = halfWidth + radius;
+  const minX = -halfWidth - radius;
+  const maxY = halfHeight + radius;
+  const minY = -halfHeight - radius;
+
+  if (position.x < minX) {
+    position.x = maxX;
+  } else if (position.x > maxX) {
+    position.x = minX;
+  }
+
+  if (position.y < minY) {
+    position.y = maxY;
+  } else if (position.y > maxY) {
+    position.y = minY;
+  }
+}

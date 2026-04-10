@@ -23,6 +23,8 @@ export class GameRenderer {
 
   private readonly scene: Phaser.Scene;
 
+  private readonly shipSprite: Phaser.GameObjects.Image;
+
   private readonly textureDisplayScale: number;
 
   constructor(scene: Phaser.Scene, reducedMotion: boolean) {
@@ -34,11 +36,16 @@ export class GameRenderer {
       .graphics()
       .setDepth(14)
       .setBlendMode(Phaser.BlendModes.SCREEN);
+    this.shipSprite = scene.add
+      .image(0, 0, 'ship')
+      .setDepth(16)
+      .setScale(this.textureDisplayScale);
   }
 
   destroy(): void {
     this.field.resize(0, 0);
     this.explosionGraphics.destroy();
+    this.shipSprite.destroy();
     this.asteroidSprites.forEach((sprite) => sprite.destroy());
     this.laserSprites.forEach((sprite) => sprite.destroy());
     this.asteroidSprites.clear();
@@ -50,6 +57,7 @@ export class GameRenderer {
     const centerY = snapshot.viewport.height / 2;
 
     this.field.render(snapshot, this.reducedMotion);
+    this.renderShip(snapshot, centerX, centerY);
     this.renderExplosions(snapshot.explosions, centerX, centerY);
 
     syncSprites(
@@ -111,6 +119,25 @@ export class GameRenderer {
         this.reducedMotion,
       );
     }
+  }
+
+  private renderShip(
+    snapshot: GameSnapshot,
+    centerX: number,
+    centerY: number,
+  ): void {
+    const isBlinkFrame =
+      snapshot.ship.damageCooldownMs > 0 &&
+      Math.floor(snapshot.elapsedMs / 90) % 2 === 0;
+
+    this.shipSprite
+      .setVisible(snapshot.showShip)
+      .setAlpha(snapshot.showShip ? (isBlinkFrame ? 0.35 : 1) : 0)
+      .setPosition(
+        centerX + snapshot.ship.position.x,
+        centerY + snapshot.ship.position.y,
+      )
+      .setRotation(snapshot.ship.angle + Math.PI / 2);
   }
 }
 

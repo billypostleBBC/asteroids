@@ -1,9 +1,11 @@
 import { emptyInputFrameState, type InputFrameState } from './actions.ts';
 
 export class InputBindings {
+  private brakeHeld = false;
+
   private readonly root: HTMLElement;
 
-  private dragAngle: number | null = null;
+  private dragPosition: InputFrameState['dragPosition'] = null;
 
   private dragPointerId: number | null = null;
 
@@ -12,6 +14,8 @@ export class InputBindings {
   private rotateLeftHeld = false;
 
   private rotateRightHeld = false;
+
+  private thrustHeld = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -35,31 +39,48 @@ export class InputBindings {
 
   getFrameState(): InputFrameState {
     return {
+      brake: this.brakeHeld,
       dragActive: this.dragPointerId !== null,
-      dragAngle: this.dragAngle,
+      dragPosition: this.dragPosition,
       fire: this.fireHeld || this.dragPointerId !== null,
       rotateLeft: this.rotateLeftHeld,
       rotateRight: this.rotateRightHeld,
+      thrust: this.thrustHeld,
     };
   }
 
   reset(): void {
-    this.dragAngle = emptyInputFrameState.dragAngle;
+    this.brakeHeld = emptyInputFrameState.brake;
+    this.dragPosition = emptyInputFrameState.dragPosition;
     this.dragPointerId = null;
     this.fireHeld = emptyInputFrameState.fire;
     this.rotateLeftHeld = emptyInputFrameState.rotateLeft;
     this.rotateRightHeld = emptyInputFrameState.rotateRight;
+    this.thrustHeld = emptyInputFrameState.thrust;
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.code === 'ArrowLeft') {
+    if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
       event.preventDefault();
       this.rotateLeftHeld = true;
     }
 
-    if (event.code === 'ArrowRight') {
+    if (event.code === 'ArrowRight' || event.code === 'KeyD') {
       event.preventDefault();
       this.rotateRightHeld = true;
+    }
+
+    if (event.code === 'ArrowUp' || event.code === 'KeyW') {
+      event.preventDefault();
+      this.thrustHeld = true;
+    }
+
+    if (
+      event.code === 'ArrowDown' ||
+      event.code === 'KeyS'
+    ) {
+      event.preventDefault();
+      this.brakeHeld = true;
     }
 
     if (event.code === 'Space') {
@@ -69,14 +90,27 @@ export class InputBindings {
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
-    if (event.code === 'ArrowLeft') {
+    if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
       event.preventDefault();
       this.rotateLeftHeld = false;
     }
 
-    if (event.code === 'ArrowRight') {
+    if (event.code === 'ArrowRight' || event.code === 'KeyD') {
       event.preventDefault();
       this.rotateRightHeld = false;
+    }
+
+    if (event.code === 'ArrowUp' || event.code === 'KeyW') {
+      event.preventDefault();
+      this.thrustHeld = false;
+    }
+
+    if (
+      event.code === 'ArrowDown' ||
+      event.code === 'KeyS'
+    ) {
+      event.preventDefault();
+      this.brakeHeld = false;
     }
 
     if (event.code === 'Space') {
@@ -93,7 +127,7 @@ export class InputBindings {
     event.preventDefault();
     this.dragPointerId = event.pointerId;
     this.root.setPointerCapture(event.pointerId);
-    this.dragAngle = this.resolveDragAngle(event);
+    this.dragPosition = this.resolveDragPosition(event);
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
@@ -102,7 +136,7 @@ export class InputBindings {
     }
 
     event.preventDefault();
-    this.dragAngle = this.resolveDragAngle(event);
+    this.dragPosition = this.resolveDragPosition(event);
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
@@ -115,14 +149,15 @@ export class InputBindings {
     }
 
     this.dragPointerId = null;
-    this.dragAngle = null;
+    this.dragPosition = null;
   };
 
-  private resolveDragAngle(event: PointerEvent): number {
+  private resolveDragPosition(event: PointerEvent): InputFrameState['dragPosition'] {
     const bounds = this.root.getBoundingClientRect();
-    const centerX = bounds.left + bounds.width / 2;
-    const centerY = bounds.top + bounds.height / 2;
 
-    return Math.atan2(event.clientY - centerY, event.clientX - centerX);
+    return {
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+    };
   }
 }

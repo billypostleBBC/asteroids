@@ -34,13 +34,16 @@ export const SHIP_COLLISION_RADIUS = 20;
 export const SHIP_TURN_SPEED = 4.08;
 export const SHIP_TURN_ACCELERATION = 22;
 export const SHIP_TURN_DRAG = 14;
+export const SHIP_BRAKE_ACCELERATION = 340;
+export const SHIP_THRUST_ACCELERATION = 260;
+export const SHIP_MAX_SPEED = 360;
 export const SHIP_FIRE_INTERVAL_MS = 300;
 export const SHIP_FIRE_INTERVAL_STEP_MS = 20;
 export const SHIP_FIRE_INTERVAL_SCORE_STEP = 100;
 export const SHIP_FIRE_INTERVAL_MIN_MS = 140;
 export const SHIP_DAMAGE_COOLDOWN_MS = 750;
 export const LASER_SPEED = 720;
-export const LASER_TTL_MS = Number.POSITIVE_INFINITY;
+export const LASER_TTL_MS = 1400;
 export const LASER_RADIUS = 8;
 
 export const ATTRACT_MODE_DIRECTOR: SpawnDirectorConfig = {

@@ -38,6 +38,8 @@ export type ShipState = {
   damageCooldownMs: number;
   fireCooldownMs: number;
   lives: number;
+  position: Vec2;
+  velocity: Vec2;
 };
 
 export type AsteroidState = {

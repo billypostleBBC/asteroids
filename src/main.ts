@@ -19,40 +19,115 @@ applyThemeTokens();
 
 app.innerHTML = `
   <div id="game-shell" class="game-shell">
-    <div id="game-canvas" class="game-canvas" aria-hidden="true"></div>
-    <div id="game-hud" class="hud">
-      <button
-        id="pause-toggle"
-        class="hud__pause-button"
-        type="button"
-        aria-label="Pause game"
-        hidden
-      >
-        <span class="hud__pause-icon" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </span>
-      </button>
-      <div class="hud__cluster">
-        <section class="hud__panel" aria-label="Current score">
-          <span class="hud__label">Score</span>
-          <strong id="score-value" class="hud__value">0</strong>
-        </section>
-        <section class="hud__panel" aria-label="Remaining lives">
-          <span class="hud__label">Lives</span>
-          <div id="lives-value" class="hud__lives"></div>
-        </section>
+    <svg class="crt-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <filter
+          id="crt-composite"
+          x="-8%"
+          y="-8%"
+          width="116%"
+          height="116%"
+          color-interpolation-filters="sRGB"
+        >
+          <feGaussianBlur
+            in="SourceGraphic"
+            stdDeviation="1.05 0"
+            edgeMode="duplicate"
+            result="bleed"
+          />
+          <feColorMatrix
+            in="bleed"
+            type="matrix"
+            values="
+              1.04 0 0 0 0
+              0 0.98 0 0 0
+              0 0 1.08 0 0
+              0 0 0 1 0
+            "
+            result="base"
+          />
+          <feColorMatrix
+            in="SourceGraphic"
+            type="matrix"
+            values="
+              1 0 0 0 0
+              0 0 0 0 0
+              0 0 0 0 0
+              0 0 0 0.28 0
+            "
+            result="red"
+          />
+          <feOffset in="red" dx="-1.05" dy="0" result="red-shift" />
+          <feColorMatrix
+            in="SourceGraphic"
+            type="matrix"
+            values="
+              0 0 0 0 0
+              0 0 0 0 0
+              0 0 1 0 0
+              0 0 0 0.24 0
+            "
+            result="blue"
+          />
+          <feOffset in="blue" dx="1.2" dy="0" result="blue-shift" />
+          <feOffset in="base" dx="1.85" dy="0.35" result="ghost-offset" />
+          <feColorMatrix
+            in="ghost-offset"
+            type="matrix"
+            values="
+              0.94 0 0 0 0
+              0 0.98 0 0 0
+              0 0 1 0 0
+              0 0 0 0.1 0
+            "
+            result="ghost"
+          />
+          <feBlend in="base" in2="ghost" mode="screen" result="with-ghost" />
+          <feBlend in="with-ghost" in2="red-shift" mode="screen" result="with-red" />
+          <feBlend in="with-red" in2="blue-shift" mode="screen" />
+        </filter>
+      </defs>
+    </svg>
+    <div class="crt-frame" aria-hidden="true"></div>
+    <div class="crt-screen">
+      <div id="game-canvas" class="game-canvas" aria-hidden="true"></div>
+      <div id="game-hud" class="hud">
+        <button
+          id="pause-toggle"
+          class="hud__pause-button"
+          type="button"
+          aria-label="Pause game"
+          hidden
+        >
+          <span class="hud__pause-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+        <div class="hud__cluster">
+          <section class="hud__panel" aria-label="Current score">
+            <span class="hud__label">Score</span>
+            <strong id="score-value" class="hud__value">0</strong>
+          </section>
+          <section class="hud__panel" aria-label="Remaining lives">
+            <span class="hud__label">Lives</span>
+            <div id="lives-value" class="hud__lives"></div>
+          </section>
+        </div>
       </div>
-    </div>
-    <div id="screen-overlay" class="screen-overlay">
-      <div class="screen-overlay__panel">
-        <p id="overlay-kicker" class="screen-overlay__kicker"></p>
-        <h1 id="overlay-title" class="screen-overlay__title"></h1>
-        <p id="overlay-body" class="screen-overlay__body"></p>
-        <p id="overlay-score" class="screen-overlay__score"></p>
-        <button id="overlay-button" class="screen-overlay__button" type="button"></button>
-        <p id="overlay-controls" class="screen-overlay__controls"></p>
+      <div id="screen-overlay" class="screen-overlay">
+        <div class="screen-overlay__panel">
+          <p id="overlay-kicker" class="screen-overlay__kicker"></p>
+          <h1 id="overlay-title" class="screen-overlay__title"></h1>
+          <p id="overlay-body" class="screen-overlay__body"></p>
+          <p id="overlay-score" class="screen-overlay__score"></p>
+          <button id="overlay-button" class="screen-overlay__button" type="button"></button>
+          <p id="overlay-controls" class="screen-overlay__controls"></p>
+        </div>
       </div>
+      <div class="crt-ghost" aria-hidden="true"></div>
+      <div class="crt-aberration crt-aberration--red" aria-hidden="true"></div>
+      <div class="crt-aberration crt-aberration--blue" aria-hidden="true"></div>
     </div>
   </div>
 `;
@@ -62,6 +137,10 @@ const canvasHost = document.querySelector<HTMLElement>('#game-canvas');
 
 if (!shell || !canvasHost) {
   throw new Error('Game shell failed to mount.');
+}
+
+if (isSafariBrowser()) {
+  shell.classList.add('game-shell--safari');
 }
 
 const input = new InputBindings(shell);
@@ -212,4 +291,14 @@ function applyThemeTokens(): void {
   root.style.setProperty('--safe-bottom', 'max(1rem, env(safe-area-inset-bottom))');
   root.style.setProperty('--font-display', themeTokens.fonts.display);
   root.style.setProperty('--font-body', themeTokens.fonts.body);
+}
+
+function isSafariBrowser(): boolean {
+  const { userAgent, vendor } = navigator;
+
+  return (
+    /Safari/i.test(userAgent) &&
+    /Apple/i.test(vendor) &&
+    !/CriOS|Chrome|Chromium|Edg|OPR|Firefox/i.test(userAgent)
+  );
 }

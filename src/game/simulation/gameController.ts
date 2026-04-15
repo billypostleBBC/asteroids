@@ -8,7 +8,6 @@ import {
   LASER_SPEED,
   LASER_TTL_MS,
   SHIP_COLLISION_RADIUS,
-  SHIP_BRAKE_ACCELERATION,
   SHIP_DAMAGE_COOLDOWN_MS,
   SHIP_FIRE_INTERVAL_MS,
   SHIP_FIRE_INTERVAL_MIN_MS,
@@ -195,14 +194,6 @@ export class GameController {
         this.state.ship.velocity = clampVectorMagnitude(
           this.state.ship.velocity,
           SHIP_MAX_SPEED,
-        );
-      }
-
-      if (input.brake) {
-        this.state.ship.velocity = moveVectorToward(
-          this.state.ship.velocity,
-          origin(),
-          SHIP_BRAKE_ACCELERATION * deltaSeconds,
         );
       }
 
@@ -641,23 +632,6 @@ function moveToward(current: number, target: number, maxDelta: number): number {
   }
 
   return current + Math.sign(target - current) * maxDelta;
-}
-
-function moveVectorToward(current: Vec2, target: Vec2, maxDelta: number): Vec2 {
-  const deltaX = target.x - current.x;
-  const deltaY = target.y - current.y;
-  const distance = Math.hypot(deltaX, deltaY);
-
-  if (distance <= maxDelta || distance === 0) {
-    return { ...target };
-  }
-
-  const scale = maxDelta / distance;
-
-  return {
-    x: current.x + deltaX * scale,
-    y: current.y + deltaY * scale,
-  };
 }
 
 function normalizeVector(vector: Vec2): Vec2 {

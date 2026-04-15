@@ -1,8 +1,6 @@
 import { emptyInputFrameState, type InputFrameState } from './actions.ts';
 
 export class InputBindings {
-  private brakeHeld = false;
-
   private readonly root: HTMLElement;
 
   private dragPosition: InputFrameState['dragPosition'] = null;
@@ -39,7 +37,6 @@ export class InputBindings {
 
   getFrameState(): InputFrameState {
     return {
-      brake: this.brakeHeld,
       dragActive: this.dragPointerId !== null,
       dragPosition: this.dragPosition,
       fire: this.fireHeld || this.dragPointerId !== null,
@@ -50,7 +47,6 @@ export class InputBindings {
   }
 
   reset(): void {
-    this.brakeHeld = emptyInputFrameState.brake;
     this.dragPosition = emptyInputFrameState.dragPosition;
     this.dragPointerId = null;
     this.fireHeld = emptyInputFrameState.fire;
@@ -75,14 +71,6 @@ export class InputBindings {
       this.thrustHeld = true;
     }
 
-    if (
-      event.code === 'ArrowDown' ||
-      event.code === 'KeyS'
-    ) {
-      event.preventDefault();
-      this.brakeHeld = true;
-    }
-
     if (event.code === 'Space') {
       event.preventDefault();
       this.fireHeld = true;
@@ -103,14 +91,6 @@ export class InputBindings {
     if (event.code === 'ArrowUp' || event.code === 'KeyW') {
       event.preventDefault();
       this.thrustHeld = false;
-    }
-
-    if (
-      event.code === 'ArrowDown' ||
-      event.code === 'KeyS'
-    ) {
-      event.preventDefault();
-      this.brakeHeld = false;
     }
 
     if (event.code === 'Space') {

@@ -2,7 +2,6 @@ export type InputAction =
   | 'aim_drag_end'
   | 'aim_drag_move'
   | 'aim_drag_start'
-  | 'brake'
   | 'fire'
   | 'pause'
   | 'rotate_left'
@@ -15,7 +14,6 @@ export type PointerInput = {
 };
 
 export type InputFrameState = {
-  brake: boolean;
   dragActive: boolean;
   dragPosition: PointerInput | null;
   fire: boolean;
@@ -25,7 +23,6 @@ export type InputFrameState = {
 };
 
 export const emptyInputFrameState: InputFrameState = {
-  brake: false,
   dragActive: false,
   dragPosition: null,
   fire: false,

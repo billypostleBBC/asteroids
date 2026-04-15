@@ -34,7 +34,6 @@ export const SHIP_COLLISION_RADIUS = 20;
 export const SHIP_TURN_SPEED = 4.08;
 export const SHIP_TURN_ACCELERATION = 22;
 export const SHIP_TURN_DRAG = 14;
-export const SHIP_BRAKE_ACCELERATION = 340;
 export const SHIP_THRUST_ACCELERATION = 260;
 export const SHIP_MAX_SPEED = 360;
 export const SHIP_FIRE_INTERVAL_MS = 300;

@@ -160,7 +160,7 @@ export class GameHud {
     this.overlayBody.textContent = 'Tap to launch';
     this.overlayScore.textContent = '';
     this.controls.textContent =
-      'Desktop: up/W thrusts, left/A and right/D turn, down/S brakes, space fires. Mobile: drag from the ship to aim and fire.';
+      'Desktop: up/W thrusts, left/A and right/D turn, space fires. Mobile: drag from the ship to aim and fire.';
     this.button.hidden = false;
     this.button.textContent = 'Tap to launch';
     this.button.dataset.action = 'launch';

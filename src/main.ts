@@ -8,6 +8,7 @@ import { themeTokens } from './game/theme/tokens.ts';
 import { createGame } from './phaser/createGame.ts';
 import { SCENE_KEYS } from './phaser/sceneKeys.ts';
 import {
+  createLeaderboardClient,
   type LeaderboardClient,
   type LeaderboardEntry,
 } from './services/leaderboardClient.ts';
@@ -121,27 +122,28 @@ if (!shell || !canvasHost) {
 const input = new InputBindings(shell);
 const hud = new GameHud(shell);
 const controller = new GameController();
-let leaderboardClient: LeaderboardClient | null = null;
-let leaderboardClientPromise: Promise<LeaderboardClient> | null = null;
+const leaderboardClient: LeaderboardClient = createLeaderboardClient();
 
 let leaderboardEntries: LeaderboardEntry[] = [];
-let leaderboardLoadStatus: LeaderboardLoadStatus = 'loading';
-let leaderboardLoadMessage = 'Loading leaderboard...';
+let leaderboardLoadStatus: LeaderboardLoadStatus = leaderboardClient.isConfigured
+  ? 'loading'
+  : 'disabled';
+let leaderboardLoadMessage = leaderboardClient.isConfigured
+  ? 'Loading leaderboard...'
+  : 'Leaderboard is unavailable until Supabase is configured.';
 let submissionStatus: LeaderboardViewState['submissionStatus'] = 'idle';
 let submissionMessage = '';
 let currentRunScore: number | null = null;
 let hasSubmittedCurrentRun = false;
 
 const syncLeaderboardUi = (): void => {
-  const leaderboardEnabled = leaderboardClient?.isConfigured ?? false;
-
   hud.setLeaderboardState({
-    enabled: leaderboardEnabled,
+    enabled: leaderboardClient.isConfigured,
     entries: leaderboardEntries,
     loadMessage: leaderboardLoadMessage,
     loadStatus: leaderboardLoadStatus,
     submissionLocked:
-      !leaderboardEnabled ||
+      !leaderboardClient.isConfigured ||
       submissionStatus === 'submitting' ||
       hasSubmittedCurrentRun,
     submissionMessage,
@@ -149,33 +151,8 @@ const syncLeaderboardUi = (): void => {
   });
 };
 
-const ensureLeaderboardClient = async (): Promise<LeaderboardClient> => {
-  if (leaderboardClient) {
-    return leaderboardClient;
-  }
-
-  if (!leaderboardClientPromise) {
-    leaderboardClientPromise = import('./services/leaderboardClient.ts').then(
-      ({ createLeaderboardClient }) => {
-        const client = createLeaderboardClient();
-
-        leaderboardClient = client;
-        return client;
-      },
-    );
-  }
-
-  return leaderboardClientPromise;
-};
-
 const refreshLeaderboard = async (): Promise<void> => {
-  leaderboardLoadStatus = 'loading';
-  leaderboardLoadMessage = 'Loading leaderboard...';
-  syncLeaderboardUi();
-
-  const client = await ensureLeaderboardClient();
-
-  if (!client.isConfigured) {
+  if (!leaderboardClient.isConfigured) {
     leaderboardLoadStatus = 'disabled';
     leaderboardLoadMessage =
       'Leaderboard is unavailable until Supabase is configured.';
@@ -183,8 +160,12 @@ const refreshLeaderboard = async (): Promise<void> => {
     return;
   }
 
+  leaderboardLoadStatus = 'loading';
+  leaderboardLoadMessage = 'Loading leaderboard...';
+  syncLeaderboardUi();
+
   try {
-    leaderboardEntries = await client.getTopScores();
+    leaderboardEntries = await leaderboardClient.getTopScores();
     leaderboardLoadStatus = 'ready';
     leaderboardLoadMessage = leaderboardEntries.length === 0
       ? 'No scores transmitted yet.'
@@ -216,13 +197,7 @@ const submitScore = async (initials: string): Promise<void> => {
     return;
   }
 
-  const client = await ensureLeaderboardClient();
-
-  if (!client.isConfigured) {
-    submissionStatus = 'error';
-    submissionMessage =
-      'Leaderboard is unavailable until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.';
-    syncLeaderboardUi();
+  if (!leaderboardClient.isConfigured) {
     return;
   }
 
@@ -231,7 +206,7 @@ const submitScore = async (initials: string): Promise<void> => {
   syncLeaderboardUi();
 
   try {
-    await client.submitScore({
+    await leaderboardClient.submitScore({
       initials,
       score: currentRunScore,
     });

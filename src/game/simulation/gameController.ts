@@ -42,6 +42,9 @@ const MAX_MENU_ASTEROIDS = 8;
 const MAX_PLAYING_ASTEROIDS = 18;
 const SHIP_EXPLOSION_TTL_MS = 720;
 const SPAWN_COOLDOWN_WHEN_CAPPED_MS = 180;
+const GAMEPLAY_DIFFICULTY_RAMP_MS = 180000;
+const GAMEPLAY_SPEED_OVERCLOCK_DURATION_MS = 120000;
+const GAMEPLAY_SPEED_OVERCLOCK_MAX = 1.2;
 
 export class GameController {
   private state: InternalGameState = this.createState('menu');
@@ -407,7 +410,20 @@ export class GameController {
     const intensityFactor =
       this.state.mode === 'menu'
         ? 0.45 + 0.35 * Math.sin(this.state.elapsedMs / 2200)
-        : clamp(this.state.elapsedMs / 180000, 0, 1);
+        : clamp(this.state.elapsedMs / GAMEPLAY_DIFFICULTY_RAMP_MS, 0, 1);
+    const speedScaleMultiplier =
+      this.state.mode === 'menu'
+        ? 1
+        : lerp(
+            1,
+            GAMEPLAY_SPEED_OVERCLOCK_MAX,
+            clamp(
+              (this.state.elapsedMs - GAMEPLAY_DIFFICULTY_RAMP_MS) /
+                GAMEPLAY_SPEED_OVERCLOCK_DURATION_MS,
+              0,
+              1,
+            ),
+          );
 
     this.state.spawnIntensity = intensityFactor;
     this.state.spawnCooldownMs -= deltaMs;
@@ -422,7 +438,12 @@ export class GameController {
       this.state.asteroids.length < maxAsteroids
     ) {
       this.state.asteroids.push(
-        this.createAsteroid(this.state.viewport, director, intensityFactor),
+        this.createAsteroid(
+          this.state.viewport,
+          director,
+          intensityFactor,
+          speedScaleMultiplier,
+        ),
       );
       this.state.spawnCooldownMs += lerp(
         director.intervalMs.max,
@@ -443,6 +464,7 @@ export class GameController {
     viewport: ViewportState,
     director: SpawnDirectorConfig,
     intensityFactor: number,
+    speedScaleMultiplier: number,
   ): AsteroidState {
     const size = this.pickAsteroidSize(director, intensityFactor);
     const definition = ASTEROID_DEFINITIONS[size];
@@ -468,7 +490,10 @@ export class GameController {
       rotationSpeed: Phaser.Math.FloatBetween(-0.6, 0.6),
       size,
       textureKey: definition.textureKey,
-      velocity: scaleVector(heading, speed * speedScale),
+      velocity: scaleVector(
+        heading,
+        speed * speedScale * speedScaleMultiplier,
+      ),
     };
   }
 

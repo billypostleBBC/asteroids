@@ -7,7 +7,16 @@ import { GameController } from './game/simulation/gameController.ts';
 import { themeTokens } from './game/theme/tokens.ts';
 import { createGame } from './phaser/createGame.ts';
 import { SCENE_KEYS } from './phaser/sceneKeys.ts';
-import { GameHud } from './ui/GameHud.ts';
+import {
+  type LeaderboardClient,
+  type LeaderboardEntry,
+} from './services/leaderboardClient.ts';
+import {
+  GameHud,
+  type LeaderboardLoadStatus,
+  type LeaderboardViewState,
+} from './ui/GameHud.ts';
+import { registerTestApi } from './testing/testApi.ts';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -19,77 +28,7 @@ applyThemeTokens();
 
 app.innerHTML = `
   <div id="game-shell" class="game-shell">
-    <svg class="crt-defs" aria-hidden="true" focusable="false">
-      <defs>
-        <filter
-          id="crt-composite"
-          x="-8%"
-          y="-8%"
-          width="116%"
-          height="116%"
-          color-interpolation-filters="sRGB"
-        >
-          <feGaussianBlur
-            in="SourceGraphic"
-            stdDeviation="1.05 0"
-            edgeMode="duplicate"
-            result="bleed"
-          />
-          <feColorMatrix
-            in="bleed"
-            type="matrix"
-            values="
-              1.04 0 0 0 0
-              0 0.98 0 0 0
-              0 0 1.08 0 0
-              0 0 0 1 0
-            "
-            result="base"
-          />
-          <feColorMatrix
-            in="SourceGraphic"
-            type="matrix"
-            values="
-              1 0 0 0 0
-              0 0 0 0 0
-              0 0 0 0 0
-              0 0 0 0.28 0
-            "
-            result="red"
-          />
-          <feOffset in="red" dx="-1.05" dy="0" result="red-shift" />
-          <feColorMatrix
-            in="SourceGraphic"
-            type="matrix"
-            values="
-              0 0 0 0 0
-              0 0 0 0 0
-              0 0 1 0 0
-              0 0 0 0.24 0
-            "
-            result="blue"
-          />
-          <feOffset in="blue" dx="1.2" dy="0" result="blue-shift" />
-          <feOffset in="base" dx="1.85" dy="0.35" result="ghost-offset" />
-          <feColorMatrix
-            in="ghost-offset"
-            type="matrix"
-            values="
-              0.94 0 0 0 0
-              0 0.98 0 0 0
-              0 0 1 0 0
-              0 0 0 0.1 0
-            "
-            result="ghost"
-          />
-          <feBlend in="base" in2="ghost" mode="screen" result="with-ghost" />
-          <feBlend in="with-ghost" in2="red-shift" mode="screen" result="with-red" />
-          <feBlend in="with-red" in2="blue-shift" mode="screen" />
-        </filter>
-      </defs>
-    </svg>
-    <div class="crt-frame" aria-hidden="true"></div>
-    <div class="crt-screen">
+    <div class="game-shell__viewport">
       <div id="game-canvas" class="game-canvas" aria-hidden="true"></div>
       <div id="game-hud" class="hud">
         <button
@@ -121,13 +60,53 @@ app.innerHTML = `
           <h1 id="overlay-title" class="screen-overlay__title"></h1>
           <p id="overlay-body" class="screen-overlay__body"></p>
           <p id="overlay-score" class="screen-overlay__score"></p>
+          <section id="leaderboard-panel" class="leaderboard" aria-live="polite">
+            <div class="leaderboard__header">
+              <h2 class="leaderboard__title">Top Pilots</h2>
+              <button
+                id="leaderboard-retry"
+                class="leaderboard__retry"
+                type="button"
+                hidden
+              >
+                Retry
+              </button>
+            </div>
+            <ol id="leaderboard-list" class="leaderboard__list"></ol>
+            <p id="leaderboard-empty" class="leaderboard__empty"></p>
+          </section>
+          <form id="leaderboard-form" class="leaderboard-form" novalidate>
+            <label class="leaderboard-form__label" for="leaderboard-initials">
+              Transmit your initials
+            </label>
+            <div class="leaderboard-form__row">
+              <input
+                id="leaderboard-initials"
+                class="leaderboard-form__input"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="3"
+                pattern="[A-Za-z]{3}"
+                placeholder="AAA"
+                aria-label="Enter 3 initials"
+              />
+              <button
+                id="leaderboard-submit"
+                class="leaderboard-form__button"
+                type="submit"
+              >
+                Submit Score
+              </button>
+            </div>
+            <p id="leaderboard-submit-state" class="leaderboard-form__status"></p>
+          </form>
           <button id="overlay-button" class="screen-overlay__button" type="button"></button>
           <p id="overlay-controls" class="screen-overlay__controls"></p>
         </div>
       </div>
-      <div class="crt-ghost" aria-hidden="true"></div>
-      <div class="crt-aberration crt-aberration--red" aria-hidden="true"></div>
-      <div class="crt-aberration crt-aberration--blue" aria-hidden="true"></div>
     </div>
   </div>
 `;
@@ -139,13 +118,138 @@ if (!shell || !canvasHost) {
   throw new Error('Game shell failed to mount.');
 }
 
-if (isSafariBrowser()) {
-  shell.classList.add('game-shell--safari');
-}
-
 const input = new InputBindings(shell);
 const hud = new GameHud(shell);
 const controller = new GameController();
+let leaderboardClient: LeaderboardClient | null = null;
+let leaderboardClientPromise: Promise<LeaderboardClient> | null = null;
+
+let leaderboardEntries: LeaderboardEntry[] = [];
+let leaderboardLoadStatus: LeaderboardLoadStatus = 'loading';
+let leaderboardLoadMessage = 'Loading leaderboard...';
+let submissionStatus: LeaderboardViewState['submissionStatus'] = 'idle';
+let submissionMessage = '';
+let currentRunScore: number | null = null;
+let hasSubmittedCurrentRun = false;
+
+const syncLeaderboardUi = (): void => {
+  const leaderboardEnabled = leaderboardClient?.isConfigured ?? false;
+
+  hud.setLeaderboardState({
+    enabled: leaderboardEnabled,
+    entries: leaderboardEntries,
+    loadMessage: leaderboardLoadMessage,
+    loadStatus: leaderboardLoadStatus,
+    submissionLocked:
+      !leaderboardEnabled ||
+      submissionStatus === 'submitting' ||
+      hasSubmittedCurrentRun,
+    submissionMessage,
+    submissionStatus,
+  });
+};
+
+const ensureLeaderboardClient = async (): Promise<LeaderboardClient> => {
+  if (leaderboardClient) {
+    return leaderboardClient;
+  }
+
+  if (!leaderboardClientPromise) {
+    leaderboardClientPromise = import('./services/leaderboardClient.ts').then(
+      ({ createLeaderboardClient }) => {
+        const client = createLeaderboardClient();
+
+        leaderboardClient = client;
+        return client;
+      },
+    );
+  }
+
+  return leaderboardClientPromise;
+};
+
+const refreshLeaderboard = async (): Promise<void> => {
+  leaderboardLoadStatus = 'loading';
+  leaderboardLoadMessage = 'Loading leaderboard...';
+  syncLeaderboardUi();
+
+  const client = await ensureLeaderboardClient();
+
+  if (!client.isConfigured) {
+    leaderboardLoadStatus = 'disabled';
+    leaderboardLoadMessage =
+      'Leaderboard is unavailable until Supabase is configured.';
+    syncLeaderboardUi();
+    return;
+  }
+
+  try {
+    leaderboardEntries = await client.getTopScores();
+    leaderboardLoadStatus = 'ready';
+    leaderboardLoadMessage = leaderboardEntries.length === 0
+      ? 'No scores transmitted yet.'
+      : '';
+  } catch (error) {
+    leaderboardLoadStatus = 'error';
+    leaderboardLoadMessage = error instanceof Error
+      ? error.message
+      : 'Leaderboard load failed. Check Supabase access.';
+  }
+
+  syncLeaderboardUi();
+};
+
+const handleGameOver = (score: number): void => {
+  currentRunScore = score;
+  hasSubmittedCurrentRun = false;
+  submissionStatus = 'idle';
+  submissionMessage = '';
+  hud.clearLeaderboardEntry();
+  syncLeaderboardUi();
+};
+
+const submitScore = async (initials: string): Promise<void> => {
+  if (
+    currentRunScore === null ||
+    hasSubmittedCurrentRun
+  ) {
+    return;
+  }
+
+  const client = await ensureLeaderboardClient();
+
+  if (!client.isConfigured) {
+    submissionStatus = 'error';
+    submissionMessage =
+      'Leaderboard is unavailable until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.';
+    syncLeaderboardUi();
+    return;
+  }
+
+  submissionStatus = 'submitting';
+  submissionMessage = 'Transmitting score...';
+  syncLeaderboardUi();
+
+  try {
+    await client.submitScore({
+      initials,
+      score: currentRunScore,
+    });
+    hasSubmittedCurrentRun = true;
+    submissionStatus = 'success';
+    submissionMessage = 'Score transmitted.';
+    syncLeaderboardUi();
+    await refreshLeaderboard();
+  } catch (error) {
+    submissionStatus = 'error';
+    submissionMessage = error instanceof Error
+      ? error.message
+      : 'Score submission failed. Check Supabase access.';
+    syncLeaderboardUi();
+  }
+};
+
+syncLeaderboardUi();
 
 hud.render(controller.getSnapshot());
 
@@ -217,6 +321,12 @@ const launchGame = (): void => {
     return;
   }
 
+  currentRunScore = null;
+  hasSubmittedCurrentRun = false;
+  submissionStatus = 'idle';
+  submissionMessage = '';
+  hud.clearLeaderboardEntry();
+  syncLeaderboardUi();
   pendingLaunch = true;
   flushPendingLaunch();
 };
@@ -232,10 +342,29 @@ const toggleGamePause = (): void => {
 };
 
 hud.setCallbacks({
+  onGameOver: handleGameOver,
   onLaunch: launchGame,
   onRelaunch: launchGame,
+  onRetryLeaderboardLoad: () => {
+    void refreshLeaderboard();
+  },
+  onSubmitScore: (initials) => {
+    void submitScore(initials);
+  },
   onTogglePause: toggleGamePause,
 });
+
+if (import.meta.env.MODE === 'test') {
+  registerTestApi({
+    controller,
+    input,
+    isReady: () => gameReady && menuReady,
+    refreshLeaderboard,
+    root: shell,
+  });
+}
+
+void refreshLeaderboard();
 
 const handleVisibilityChange = (): void => {
   focusPaused =
@@ -259,6 +388,10 @@ window.addEventListener('focus', () => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (isEditingText(event.target)) {
+    return;
+  }
+
   if (event.code !== 'Escape' || controller.getSnapshot().mode !== 'playing') {
     return;
   }
@@ -287,18 +420,25 @@ function applyThemeTokens(): void {
   root.style.setProperty('--pulse-duration', `${themeTokens.motion.pulseMs}ms`);
   root.style.setProperty('--stroke-main', `${themeTokens.stroke.main}px`);
   root.style.setProperty('--safe-top', 'max(1rem, env(safe-area-inset-top))');
+  root.style.setProperty('--safe-left', 'max(1rem, env(safe-area-inset-left))');
   root.style.setProperty('--safe-right', 'max(1rem, env(safe-area-inset-right))');
   root.style.setProperty('--safe-bottom', 'max(1rem, env(safe-area-inset-bottom))');
   root.style.setProperty('--font-display', themeTokens.fonts.display);
   root.style.setProperty('--font-body', themeTokens.fonts.body);
 }
 
-function isSafariBrowser(): boolean {
-  const { userAgent, vendor } = navigator;
+function isEditingText(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
 
   return (
-    /Safari/i.test(userAgent) &&
-    /Apple/i.test(vendor) &&
-    !/CriOS|Chrome|Chromium|Edg|OPR|Firefox/i.test(userAgent)
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
   );
 }

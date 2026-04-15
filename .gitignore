@@ -4,3 +4,8 @@ output/
 .DS_Store
 .codex/
 .playwright-cli/
+playwright-report/
+test-results/
+.env
+.env.local
+.env.*.local

@@ -9,6 +9,8 @@ export class InputBindings {
 
   private fireHeld = false;
 
+  private fireQueued = false;
+
   private rotateLeftHeld = false;
 
   private rotateRightHeld = false;
@@ -36,10 +38,14 @@ export class InputBindings {
   }
 
   getFrameState(): InputFrameState {
+    const fire = this.fireHeld || this.fireQueued || this.dragPointerId !== null;
+
+    this.fireQueued = false;
+
     return {
       dragActive: this.dragPointerId !== null,
       dragPosition: this.dragPosition,
-      fire: this.fireHeld || this.dragPointerId !== null,
+      fire,
       rotateLeft: this.rotateLeftHeld,
       rotateRight: this.rotateRightHeld,
       thrust: this.thrustHeld,
@@ -50,12 +56,17 @@ export class InputBindings {
     this.dragPosition = emptyInputFrameState.dragPosition;
     this.dragPointerId = null;
     this.fireHeld = emptyInputFrameState.fire;
+    this.fireQueued = emptyInputFrameState.fire;
     this.rotateLeftHeld = emptyInputFrameState.rotateLeft;
     this.rotateRightHeld = emptyInputFrameState.rotateRight;
     this.thrustHeld = emptyInputFrameState.thrust;
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (isEditingText(event.target)) {
+      return;
+    }
+
     if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
       event.preventDefault();
       this.rotateLeftHeld = true;
@@ -74,10 +85,15 @@ export class InputBindings {
     if (event.code === 'Space') {
       event.preventDefault();
       this.fireHeld = true;
+      this.fireQueued = true;
     }
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
+    if (isEditingText(event.target)) {
+      return;
+    }
+
     if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
       event.preventDefault();
       this.rotateLeftHeld = false;
@@ -140,4 +156,20 @@ export class InputBindings {
       y: event.clientY - bounds.top,
     };
   }
+}
+
+function isEditingText(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
 }

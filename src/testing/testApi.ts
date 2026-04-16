@@ -1,3 +1,4 @@
+import type { AudioDebugState, AudioSystem } from '../game/audio/audioSystem.ts';
 import type { InputBindings } from '../game/input/bindings.ts';
 import type { GameController } from '../game/simulation/gameController.ts';
 import type {
@@ -26,6 +27,7 @@ export type AsteroidsTestApi = {
   clearEntities: () => void;
   clearInput: () => void;
   freezeSpawns: () => void;
+  getAudioState: () => AudioDebugState;
   getSnapshot: () => GameSnapshot;
   getUiState: () => TestUiState;
   isReady: () => boolean;
@@ -49,6 +51,7 @@ export type AsteroidsTestApi = {
 };
 
 type RegisterTestApiParams = {
+  audio: AudioSystem;
   controller: GameController;
   input: InputBindings;
   isReady: () => boolean;
@@ -57,6 +60,7 @@ type RegisterTestApiParams = {
 };
 
 export function registerTestApi({
+  audio,
   controller,
   input,
   isReady,
@@ -93,6 +97,7 @@ export function registerTestApi({
     freezeSpawns: () => {
       getInternalState(controller).spawnCooldownMs = Number.POSITIVE_INFINITY;
     },
+    getAudioState: () => audio.getDebugState(),
     getSnapshot: () => controller.getSnapshot(),
     getUiState: () => ({
       leaderboardFormVisible: !leaderboardForm.hidden,

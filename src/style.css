@@ -102,10 +102,16 @@ button {
   z-index: 3;
 }
 
-.hud__pause-button {
+.hud__controls {
   position: absolute;
   top: calc(var(--safe-top) + 0.35rem);
   left: calc(var(--safe-left) + 0.35rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hud__control-button {
   display: grid;
   place-items: center;
   width: 3rem;
@@ -128,8 +134,8 @@ button {
     background var(--overlay-duration) ease;
 }
 
-.hud__pause-button:hover,
-.hud__pause-button:focus-visible {
+.hud__control-button:hover,
+.hud__control-button:focus-visible {
   outline: none;
   transform: translateY(-0.05rem);
   border-color: rgba(103, 180, 255, 0.56);
@@ -138,7 +144,8 @@ button {
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.hud__pause-button[data-state='paused'] {
+.hud__control-button[data-state='paused'],
+.hud__audio-button[data-state='muted'] {
   background:
     linear-gradient(180deg, rgba(18, 32, 55, 0.98) 0%, rgba(7, 15, 29, 0.94) 100%);
   border-color: rgba(103, 180, 255, 0.6);
@@ -154,6 +161,13 @@ button {
   height: 0.9rem;
   border-radius: 999px;
   background: currentColor;
+}
+
+.hud__audio-button {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.16rem;
+  text-transform: uppercase;
 }
 
 .hud__cluster {
@@ -595,9 +609,13 @@ button {
   :root {
   }
 
-  .hud__pause-button {
+  .hud__controls {
     top: calc(var(--safe-top) + 0.2rem);
     left: calc(var(--safe-left) + 0.2rem);
+    gap: 0.45rem;
+  }
+
+  .hud__control-button {
     width: 2.7rem;
     height: 2.7rem;
   }
@@ -648,7 +666,7 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .hud__life,
-  .hud__pause-button,
+  .hud__control-button,
   .screen-overlay__panel,
   .screen-overlay__button {
     transition: none;

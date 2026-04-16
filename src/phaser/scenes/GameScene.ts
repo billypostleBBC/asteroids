@@ -12,7 +12,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { controller, hud, input, reducedMotion } = getGameServices();
+    const { audio, controller, hud, input, reducedMotion } = getGameServices();
 
     controller.startRun({
       width: this.scale.width,
@@ -21,6 +21,11 @@ export class GameScene extends Phaser.Scene {
 
     input.reset();
     this.gameRenderer = new GameRenderer(this, reducedMotion);
+    audio.syncState({
+      input: input.getFrameState(),
+      mode: controller.getSnapshot().mode,
+      shipAlive: controller.getSnapshot().ship.alive,
+    });
     hud.setFocusPaused(false);
     hud.render(controller.getSnapshot());
 
@@ -29,11 +34,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_: number, delta: number): void {
-    const { controller, hud, input } = getGameServices();
+    const { audio, controller, hud, input } = getGameServices();
+    const frameInput = input.getFrameState();
 
     controller.update({
       deltaMs: delta,
-      input: input.getFrameState(),
+      input: frameInput,
       viewport: {
         width: this.scale.width,
         height: this.scale.height,
@@ -41,6 +47,12 @@ export class GameScene extends Phaser.Scene {
     });
 
     const snapshot = controller.getSnapshot();
+    audio.syncState({
+      input: frameInput,
+      mode: snapshot.mode,
+      shipAlive: snapshot.ship.alive,
+    });
+    audio.playEvents(controller.consumeAudioEvents());
     this.gameRenderer?.render(snapshot);
     hud.render(snapshot);
   }

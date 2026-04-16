@@ -1,8 +1,10 @@
+import type { AudioSystem } from '../game/audio/audioSystem.ts';
 import type { InputBindings } from '../game/input/bindings.ts';
 import type { GameController } from '../game/simulation/gameController.ts';
 import type { GameHud } from '../ui/GameHud.ts';
 
 type GameServices = {
+  audio: AudioSystem;
   controller: GameController;
   hud: GameHud;
   input: InputBindings;

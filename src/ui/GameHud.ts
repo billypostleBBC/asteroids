@@ -26,6 +26,7 @@ type HudCallbacks = {
   onRelaunch: () => void;
   onRetryLeaderboardLoad: () => void;
   onSubmitScore: (initials: string) => void;
+  onToggleAudio: () => void;
   onTogglePause: () => void;
 };
 
@@ -40,8 +41,13 @@ export class GameHud {
     onRelaunch: () => undefined,
     onRetryLeaderboardLoad: () => undefined,
     onSubmitScore: () => undefined,
+    onToggleAudio: () => undefined,
     onTogglePause: () => undefined,
   };
+
+  private audioMuted = false;
+
+  private readonly audioButton: HTMLButtonElement;
 
   private focusPaused = false;
 
@@ -121,12 +127,15 @@ export class GameHud {
     this.button = root.querySelector<HTMLButtonElement>('#overlay-button')!;
     this.controls = root.querySelector<HTMLParagraphElement>('#overlay-controls')!;
     this.pauseButton = root.querySelector<HTMLButtonElement>('#pause-toggle')!;
+    this.audioButton = root.querySelector<HTMLButtonElement>('#audio-toggle')!;
     this.scoreValue = root.querySelector<HTMLElement>('#score-value')!;
     this.livesValue = root.querySelector<HTMLDivElement>('#lives-value')!;
 
     this.button.addEventListener('click', this.handleButtonClick);
     this.pauseButton.addEventListener('click', this.handlePauseButtonClick);
     this.pauseButton.addEventListener('pointerdown', this.handlePauseButtonPointerDown);
+    this.audioButton.addEventListener('click', this.handleAudioButtonClick);
+    this.audioButton.addEventListener('pointerdown', this.handleAudioButtonPointerDown);
     this.leaderboardRetry.addEventListener('click', this.handleRetryClick);
     this.leaderboardForm.addEventListener('submit', this.handleLeaderboardSubmit);
     this.leaderboardInput.addEventListener('input', this.handleInitialsInput);
@@ -139,6 +148,7 @@ export class GameHud {
     document.fonts.ready.then(() => {
       this.fitTitleToPanel();
     });
+    this.renderAudioButton();
   }
 
   clearLeaderboardEntry(): void {
@@ -154,6 +164,8 @@ export class GameHud {
     this.button.removeEventListener('click', this.handleButtonClick);
     this.pauseButton.removeEventListener('click', this.handlePauseButtonClick);
     this.pauseButton.removeEventListener('pointerdown', this.handlePauseButtonPointerDown);
+    this.audioButton.removeEventListener('click', this.handleAudioButtonClick);
+    this.audioButton.removeEventListener('pointerdown', this.handleAudioButtonPointerDown);
     this.leaderboardRetry.removeEventListener('click', this.handleRetryClick);
     this.leaderboardForm.removeEventListener('submit', this.handleLeaderboardSubmit);
     this.leaderboardInput.removeEventListener('input', this.handleInitialsInput);
@@ -200,6 +212,11 @@ export class GameHud {
 
   setCallbacks(callbacks: HudCallbacks): void {
     this.callbacks = callbacks;
+  }
+
+  setAudioMuted(value: boolean): void {
+    this.audioMuted = value;
+    this.renderAudioButton();
   }
 
   setFocusPaused(value: boolean): void {
@@ -302,6 +319,15 @@ export class GameHud {
     this.pauseButton.dataset.state = this.gamePaused ? 'paused' : 'playing';
   }
 
+  private renderAudioButton(): void {
+    this.audioButton.dataset.state = this.audioMuted ? 'muted' : 'audible';
+    this.audioButton.setAttribute(
+      'aria-label',
+      this.audioMuted ? 'Unmute audio' : 'Mute audio',
+    );
+    this.audioButton.textContent = this.audioMuted ? 'MUTE' : 'SND';
+  }
+
   private readonly handleButtonClick = (): void => {
     if (this.button.dataset.action === 'launch') {
       this.callbacks.onLaunch();
@@ -345,6 +371,17 @@ export class GameHud {
   };
 
   private readonly handlePauseButtonPointerDown = (event: PointerEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  private readonly handleAudioButtonClick = (event: MouseEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    this.callbacks.onToggleAudio();
+  };
+
+  private readonly handleAudioButtonPointerDown = (event: PointerEvent): void => {
     event.preventDefault();
     event.stopPropagation();
   };

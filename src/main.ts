@@ -2,6 +2,7 @@ import './style.css';
 
 import Phaser from 'phaser';
 
+import { AudioSystem } from './game/audio/audioSystem.ts';
 import { InputBindings } from './game/input/bindings.ts';
 import { GameController } from './game/simulation/gameController.ts';
 import { themeTokens } from './game/theme/tokens.ts';
@@ -20,6 +21,7 @@ import {
 import { registerTestApi } from './testing/testApi.ts';
 
 const app = document.querySelector<HTMLDivElement>('#app');
+const AUDIO_MUTED_STORAGE_KEY = 'asteroids.audio-muted';
 
 if (!app) {
   throw new Error('App root was not found.');
@@ -32,18 +34,28 @@ app.innerHTML = `
     <div class="game-shell__viewport">
       <div id="game-canvas" class="game-canvas" aria-hidden="true"></div>
       <div id="game-hud" class="hud">
-        <button
-          id="pause-toggle"
-          class="hud__pause-button"
-          type="button"
-          aria-label="Pause game"
-          hidden
-        >
-          <span class="hud__pause-icon" aria-hidden="true">
-            <span></span>
-            <span></span>
-          </span>
-        </button>
+        <div class="hud__controls">
+          <button
+            id="pause-toggle"
+            class="hud__control-button"
+            type="button"
+            aria-label="Pause game"
+            hidden
+          >
+            <span class="hud__pause-icon" aria-hidden="true">
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+          <button
+            id="audio-toggle"
+            class="hud__control-button hud__audio-button"
+            type="button"
+            aria-label="Mute audio"
+          >
+            SND
+          </button>
+        </div>
         <div class="hud__cluster">
           <section class="hud__panel" aria-label="Current score">
             <span class="hud__label">Score</span>
@@ -122,6 +134,7 @@ if (!shell || !canvasHost) {
 const input = new InputBindings(shell);
 const hud = new GameHud(shell);
 const controller = new GameController();
+const audio = new AudioSystem({ muted: readStoredAudioMuted() });
 const leaderboardClient: LeaderboardClient = createLeaderboardClient();
 
 let leaderboardEntries: LeaderboardEntry[] = [];
@@ -226,6 +239,7 @@ const submitScore = async (initials: string): Promise<void> => {
 
 syncLeaderboardUi();
 
+hud.setAudioMuted(audio.getDebugState().muted);
 hud.render(controller.getSnapshot());
 
 let menuReady = false;
@@ -240,6 +254,7 @@ window.addEventListener(
 );
 
 const phaserGame = createGame({
+  audio,
   host: canvasHost,
   controller,
   hud,
@@ -262,6 +277,7 @@ const syncPauseState = (): void => {
   const suspended = focusPaused || escapePaused;
 
   controller.setSuspended(suspended);
+  audio.setSuspended(suspended);
   hud.setFocusPaused(focusPaused);
   hud.setGamePaused(escapePaused);
 };
@@ -296,6 +312,7 @@ const launchGame = (): void => {
     return;
   }
 
+  void audio.unlock();
   currentRunScore = null;
   hasSubmittedCurrentRun = false;
   submissionStatus = 'idle';
@@ -316,6 +333,15 @@ const toggleGamePause = (): void => {
   syncPauseState();
 };
 
+const toggleAudioMute = (): void => {
+  const nextMuted = !audio.getDebugState().muted;
+
+  void audio.unlock();
+  audio.setMuted(nextMuted);
+  hud.setAudioMuted(nextMuted);
+  writeStoredAudioMuted(nextMuted);
+};
+
 hud.setCallbacks({
   onGameOver: handleGameOver,
   onLaunch: launchGame,
@@ -326,11 +352,13 @@ hud.setCallbacks({
   onSubmitScore: (initials) => {
     void submitScore(initials);
   },
+  onToggleAudio: toggleAudioMute,
   onTogglePause: toggleGamePause,
 });
 
 if (import.meta.env.MODE === 'test') {
   registerTestApi({
+    audio,
     controller,
     input,
     isReady: () => gameReady && menuReady,
@@ -340,6 +368,10 @@ if (import.meta.env.MODE === 'test') {
 }
 
 void refreshLeaderboard();
+
+const unlockAudioFromGesture = (): void => {
+  void audio.unlock();
+};
 
 const handleVisibilityChange = (): void => {
   focusPaused =
@@ -362,9 +394,25 @@ window.addEventListener('focus', () => {
   syncPauseState();
 });
 
+shell.addEventListener('pointerdown', unlockAudioFromGesture);
+
 window.addEventListener('keydown', (event) => {
   if (isEditingText(event.target)) {
     return;
+  }
+
+  if (
+    event.code === 'ArrowLeft' ||
+    event.code === 'ArrowRight' ||
+    event.code === 'ArrowUp' ||
+    event.code === 'Enter' ||
+    event.code === 'Escape' ||
+    event.code === 'KeyA' ||
+    event.code === 'KeyD' ||
+    event.code === 'KeyW' ||
+    event.code === 'Space'
+  ) {
+    unlockAudioFromGesture();
   }
 
   if (event.code !== 'Escape' || controller.getSnapshot().mode !== 'playing') {
@@ -416,4 +464,20 @@ function isEditingText(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
   );
+}
+
+function readStoredAudioMuted(): boolean {
+  try {
+    return window.localStorage.getItem(AUDIO_MUTED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredAudioMuted(value: boolean): void {
+  try {
+    window.localStorage.setItem(AUDIO_MUTED_STORAGE_KEY, String(value));
+  } catch {
+    // Local storage failures should not block the game.
+  }
 }

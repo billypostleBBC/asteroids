@@ -22,6 +22,7 @@ import {
 import type {
   AsteroidState,
   AsteroidSize,
+  AudioEvent,
   ExplosionState,
   GameMode,
   GameSnapshot,
@@ -49,6 +50,8 @@ const GAMEPLAY_SPEED_OVERCLOCK_MAX = 1.2;
 export class GameController {
   private state: InternalGameState = this.createState('menu');
 
+  private audioEvents: AudioEvent[] = [];
+
   private suspended = false;
 
   getSnapshot(): GameSnapshot {
@@ -67,16 +70,26 @@ export class GameController {
     };
   }
 
+  consumeAudioEvents(): AudioEvent[] {
+    const pendingEvents = this.audioEvents;
+
+    this.audioEvents = [];
+
+    return pendingEvents;
+  }
+
   setSuspended(suspended: boolean): void {
     this.suspended = suspended;
   }
 
   startAttractMode(viewport = this.state.viewport): void {
     this.state = this.createState('menu', viewport);
+    this.audioEvents = [];
   }
 
   startRun(viewport = this.state.viewport): void {
     this.state = this.createState('playing', viewport);
+    this.audioEvents = [];
   }
 
   update({ deltaMs, input, viewport }: UpdatePayload): void {
@@ -279,6 +292,10 @@ export class GameController {
         scaleVector(heading, LASER_SPEED),
       ),
     });
+
+    if (this.state.mode === 'playing') {
+      this.emitAudioEvent('laser_fired');
+    }
   }
 
   private updateProjectiles(deltaMs: number): void {
@@ -333,6 +350,7 @@ export class GameController {
             'asteroid',
           );
           if (this.state.mode !== 'menu') {
+            this.emitAudioEvent('asteroid_broke');
             this.state.score += asteroid.points;
             this.state.lastScoreAt = this.state.elapsedMs;
             this.applyBonusLifeRule();
@@ -362,8 +380,13 @@ export class GameController {
         this.state.ship.lives += 1;
       }
 
+      this.emitAudioEvent('score_threshold');
       this.state.nextLifeScore += 100;
     }
+  }
+
+  private emitAudioEvent(event: AudioEvent): void {
+    this.audioEvents.push(event);
   }
 
   private resolveShipHits(): void {
@@ -389,6 +412,7 @@ export class GameController {
     this.state.ship.lives -= 1;
 
     if (this.state.ship.lives <= 0) {
+      this.emitAudioEvent('ship_destroyed');
       this.spawnExplosion(this.state.ship.position, 74, 'ship');
       this.state.ship.alive = false;
       this.state.gameOverOverlayDelayMs = GAME_OVER_OVERLAY_DELAY_MS;
@@ -397,6 +421,7 @@ export class GameController {
       return;
     }
 
+    this.emitAudioEvent('ship_hit');
     this.state.ship.position = origin();
     this.state.ship.velocity = origin();
     this.state.ship.angle = -Math.PI / 2;

@@ -13,7 +13,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { controller, hud, reducedMotion } = getGameServices();
+    const { audio, controller, hud, reducedMotion } = getGameServices();
 
     controller.startAttractMode({
       width: this.scale.width,
@@ -21,6 +21,11 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.gameRenderer = new GameRenderer(this, reducedMotion);
+    audio.syncState({
+      input: emptyInputFrameState,
+      mode: controller.getSnapshot().mode,
+      shipAlive: controller.getSnapshot().ship.alive,
+    });
     hud.setFocusPaused(false);
     hud.render(controller.getSnapshot());
     window.dispatchEvent(new Event('asteroids:menu-ready'));
@@ -30,7 +35,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(_: number, delta: number): void {
-    const { controller, hud } = getGameServices();
+    const { audio, controller, hud } = getGameServices();
 
     controller.update({
       deltaMs: delta,
@@ -42,6 +47,12 @@ export class MenuScene extends Phaser.Scene {
     });
 
     const snapshot = controller.getSnapshot();
+
+    audio.syncState({
+      input: emptyInputFrameState,
+      mode: snapshot.mode,
+      shipAlive: snapshot.ship.alive,
+    });
     this.gameRenderer?.render(snapshot);
     hud.render(snapshot);
   }

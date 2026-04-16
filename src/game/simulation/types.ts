@@ -11,6 +11,13 @@ export type AsteroidDefinition = {
 
 export type AsteroidSize = 'large' | 'medium' | 'small';
 
+export type AudioEvent =
+  | 'asteroid_broke'
+  | 'laser_fired'
+  | 'score_threshold'
+  | 'ship_destroyed'
+  | 'ship_hit';
+
 export type GameMode = 'gameover' | 'menu' | 'playing';
 
 export type SpawnDirectorConfig = {

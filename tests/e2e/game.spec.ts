@@ -1,11 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.locator('#game-canvas canvas').waitFor({ state: 'visible' });
-  await expect
-    .poll(() => page.evaluate(() => window.__ASTEROIDS_TEST_API__?.isReady() ?? false))
-    .toBe(true);
+  await openGame(page);
   await page.evaluate(() => {
     window.__ASTEROIDS_TEST_API__?.setLeaderboardEntries([]);
     window.__ASTEROIDS_TEST_API__?.setLeaderboardFailure({
@@ -49,6 +45,100 @@ test('fires the ship weapon with Space', async ({ page }) => {
   await expect
     .poll(async () => (await readSnapshot(page)).projectiles.length)
     .toBeGreaterThan(before.projectiles.length);
+});
+
+test('audio starts locked, unlocks on launch, and keeps ambient active during play', async ({
+  page,
+}) => {
+  const initialAudio = await readAudioState(page);
+
+  expect(initialAudio.unlocked).toBe(false);
+  expect(initialAudio.ambientActive).toBe(false);
+
+  await launchWithButton(page);
+
+  await expect.poll(async () => (await readAudioState(page)).unlocked).toBe(true);
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(true);
+});
+
+test('thrust loop activates while thrust is held and drops out on release and pause', async ({
+  page,
+}) => {
+  await launchWithButton(page);
+
+  await page.keyboard.down('w');
+  await expect.poll(async () => (await readAudioState(page)).thrustActive).toBe(true);
+
+  await page.keyboard.up('w');
+  await expect.poll(async () => (await readAudioState(page)).thrustActive).toBe(false);
+
+  await page.keyboard.down('w');
+  await expect.poll(async () => (await readAudioState(page)).thrustActive).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(false);
+  await expect.poll(async () => (await readAudioState(page)).thrustActive).toBe(false);
+  await page.keyboard.up('w');
+});
+
+test('laser and asteroid breakup cues fire, but the score stinger only fires on thresholds', async ({
+  page,
+}) => {
+  await launchWithButton(page);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.freezeSpawns();
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setShipState({
+      fireCooldownMs: 0,
+      position: { x: 0, y: 0 },
+      velocity: { x: 0, y: 0 },
+    });
+  });
+
+  const beforeLaser = await readAudioState(page);
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await readAudioState(page)).cueCounts.laser).toBe(
+    beforeLaser.cueCounts.laser + 1,
+  );
+
+  const beforeBreakup = await readAudioState(page);
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.queueProjectileHit(1);
+  });
+  await expect.poll(async () => (await readAudioState(page)).cueCounts.asteroidBreakup).toBe(
+    beforeBreakup.cueCounts.asteroidBreakup + 1,
+  );
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      lives: 3,
+      nextLifeScore: 100,
+      score: 98,
+    });
+    window.__ASTEROIDS_TEST_API__?.queueProjectileHit(1);
+  });
+
+  const belowThreshold = await readAudioState(page);
+  await expect.poll(async () => (await readSnapshot(page)).score).toBe(99);
+  expect((await readAudioState(page)).cueCounts.scoreStinger).toBe(
+    belowThreshold.cueCounts.scoreStinger,
+  );
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      lives: 2,
+      nextLifeScore: 100,
+      score: 99,
+    });
+    window.__ASTEROIDS_TEST_API__?.queueProjectileHit(1);
+  });
+
+  await expect.poll(async () => (await readSnapshot(page)).score).toBe(100);
+  await expect.poll(async () => (await readAudioState(page)).cueCounts.scoreStinger).toBe(
+    belowThreshold.cueCounts.scoreStinger + 1,
+  );
 });
 
 test('moves with thrust and turning inputs from keyboard controls', async ({ page }) => {
@@ -367,12 +457,14 @@ test('pauses on window blur and resumes on focus without dropping back to the me
   await expect
     .poll(async () => (await readUiState(page)).overlayTitle)
     .toBe('Stand By');
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(false);
 
   const paused = await readSnapshot(page);
   await page.waitForTimeout(200);
   expect((await readSnapshot(page)).elapsedMs).toBe(paused.elapsedMs);
 
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(true);
   await expect.poll(async () => (await readSnapshot(page)).elapsedMs).toBeGreaterThan(
     paused.elapsedMs,
   );
@@ -474,9 +566,92 @@ test('keeps life rewards capped at three on exact 100, 200, and 300 point thresh
   }
 });
 
+test('ship hit and final ship destruction trigger different explosion cues', async ({
+  page,
+}) => {
+  await launchWithButton(page);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.freezeSpawns();
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      lives: 2,
+      nextLifeScore: 100,
+      score: 0,
+    });
+    window.__ASTEROIDS_TEST_API__?.setShipState({
+      alive: true,
+      damageCooldownMs: 0,
+      position: { x: 0, y: 0 },
+      velocity: { x: 0, y: 0 },
+    });
+  });
+
+  const beforeHit = await readAudioState(page);
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.queueShipCollision();
+  });
+  await expect.poll(async () => (await readSnapshot(page)).ship.lives).toBe(1);
+  await expect.poll(async () => (await readAudioState(page)).cueCounts.shipHit).toBe(
+    beforeHit.cueCounts.shipHit + 1,
+  );
+  expect((await readAudioState(page)).cueCounts.shipDestroyed).toBe(
+    beforeHit.cueCounts.shipDestroyed,
+  );
+
+  const beforeDestroyed = await readAudioState(page);
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.setShipState({ damageCooldownMs: 0 });
+    window.__ASTEROIDS_TEST_API__?.queueShipCollision();
+  });
+  await expect.poll(() => readMode(page)).toBe('gameover');
+  await expect.poll(async () => (await readAudioState(page)).cueCounts.shipDestroyed).toBe(
+    beforeDestroyed.cueCounts.shipDestroyed + 1,
+  );
+});
+
+test('mute silences active audio layers and persists after reload', async ({ page }) => {
+  await launchWithButton(page);
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(true);
+
+  const muteButton = page.getByRole('button', { name: 'Mute audio' });
+  await muteButton.click();
+
+  await expect.poll(async () => (await readAudioState(page)).muted).toBe(true);
+  await expect.poll(async () => (await readAudioState(page)).ambientActive).toBe(false);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.freezeSpawns();
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setShipState({ fireCooldownMs: 0 });
+  });
+
+  const mutedCounts = await readAudioState(page);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(120);
+  expect((await readAudioState(page)).cueCounts.laser).toBe(mutedCounts.cueCounts.laser);
+
+  await openGame(page, true);
+  expect((await readAudioState(page)).muted).toBe(true);
+  await expect(page.getByRole('button', { name: 'Unmute audio' })).toBeVisible();
+});
+
 async function launchWithButton(page: Page) {
   await page.getByRole('button', { name: 'Tap to launch' }).click();
   await expect.poll(() => readMode(page)).toBe('playing');
+}
+
+async function openGame(page: Page, reload = false) {
+  if (reload) {
+    await page.reload();
+  } else {
+    await page.goto('/');
+  }
+
+  await page.locator('#game-canvas canvas').waitFor({ state: 'visible' });
+  await expect
+    .poll(() => page.evaluate(() => window.__ASTEROIDS_TEST_API__?.isReady() ?? false))
+    .toBe(true);
 }
 
 async function forceGameOver(
@@ -530,6 +705,10 @@ async function readSnapshot(page: Page) {
 
 async function readUiState(page: Page) {
   return page.evaluate(() => window.__ASTEROIDS_TEST_API__!.getUiState());
+}
+
+async function readAudioState(page: Page) {
+  return page.evaluate(() => window.__ASTEROIDS_TEST_API__!.getAudioState());
 }
 
 function magnitude(vector: { x: number; y: number }) {

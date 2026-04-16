@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import type { AudioSystem } from '../game/audio/audioSystem.ts';
 import type { InputBindings } from '../game/input/bindings.ts';
 import type { GameController } from '../game/simulation/gameController.ts';
 import type { GameHud } from '../ui/GameHud.ts';
@@ -9,6 +10,7 @@ import { MenuScene } from './scenes/MenuScene.ts';
 import { setGameServices } from './services.ts';
 
 type CreateGameParams = {
+  audio: AudioSystem;
   controller: GameController;
   host: HTMLElement;
   hud: GameHud;
@@ -17,6 +19,7 @@ type CreateGameParams = {
 };
 
 export function createGame({
+  audio,
   controller,
   host,
   hud,
@@ -24,6 +27,7 @@ export function createGame({
   reducedMotion,
 }: CreateGameParams): Phaser.Game {
   setGameServices({
+    audio,
     controller,
     hud,
     input,

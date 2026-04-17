@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate:og && tsc && vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-    "generate:og": "node scripts/generate-og-image.mjs",
     "test": "playwright test",
     "test:headed": "playwright test --headed"
   },

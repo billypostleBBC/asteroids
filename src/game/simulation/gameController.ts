@@ -4,6 +4,9 @@ import {
   ASTEROID_DEFINITIONS,
   ATTRACT_MODE_DIRECTOR,
   GAMEPLAY_DIRECTOR,
+  GAMEPLAY_DIFFICULTY_RAMP_SCORE,
+  GAMEPLAY_SPEED_OVERCLOCK_END_SCORE,
+  GAMEPLAY_SPEED_OVERCLOCK_MAX,
   LASER_RADIUS,
   LASER_SPEED,
   LASER_TTL_MS,
@@ -43,9 +46,6 @@ const MAX_MENU_ASTEROIDS = 8;
 const MAX_PLAYING_ASTEROIDS = 18;
 const SHIP_EXPLOSION_TTL_MS = 720;
 const SPAWN_COOLDOWN_WHEN_CAPPED_MS = 180;
-const GAMEPLAY_DIFFICULTY_RAMP_MS = 180000;
-const GAMEPLAY_SPEED_OVERCLOCK_DURATION_MS = 120000;
-const GAMEPLAY_SPEED_OVERCLOCK_MAX = 1.2;
 
 export class GameController {
   private state: InternalGameState = this.createState('menu');
@@ -432,23 +432,13 @@ export class GameController {
   private spawnAsteroids(deltaMs: number): void {
     const director =
       this.state.mode === 'menu' ? ATTRACT_MODE_DIRECTOR : GAMEPLAY_DIRECTOR;
+    const gameplayDifficulty = this.getGameplayDifficulty();
     const intensityFactor =
       this.state.mode === 'menu'
         ? 0.45 + 0.35 * Math.sin(this.state.elapsedMs / 2200)
-        : clamp(this.state.elapsedMs / GAMEPLAY_DIFFICULTY_RAMP_MS, 0, 1);
+        : gameplayDifficulty.intensityFactor;
     const speedScaleMultiplier =
-      this.state.mode === 'menu'
-        ? 1
-        : lerp(
-            1,
-            GAMEPLAY_SPEED_OVERCLOCK_MAX,
-            clamp(
-              (this.state.elapsedMs - GAMEPLAY_DIFFICULTY_RAMP_MS) /
-                GAMEPLAY_SPEED_OVERCLOCK_DURATION_MS,
-              0,
-              1,
-            ),
-          );
+      this.state.mode === 'menu' ? 1 : gameplayDifficulty.speedScaleMultiplier;
 
     this.state.spawnIntensity = intensityFactor;
     this.state.spawnCooldownMs -= deltaMs;
@@ -483,6 +473,28 @@ export class GameController {
     ) {
       this.state.spawnCooldownMs = SPAWN_COOLDOWN_WHEN_CAPPED_MS;
     }
+  }
+
+  private getGameplayDifficulty(): {
+    intensityFactor: number;
+    speedScaleMultiplier: number;
+  } {
+    const intensityFactor = clamp(
+      this.state.score / GAMEPLAY_DIFFICULTY_RAMP_SCORE,
+      0,
+      1,
+    );
+    const overclockProgress = clamp(
+      (this.state.score - GAMEPLAY_DIFFICULTY_RAMP_SCORE) /
+        (GAMEPLAY_SPEED_OVERCLOCK_END_SCORE - GAMEPLAY_DIFFICULTY_RAMP_SCORE),
+      0,
+      1,
+    );
+
+    return {
+      intensityFactor,
+      speedScaleMultiplier: lerp(1, GAMEPLAY_SPEED_OVERCLOCK_MAX, overclockProgress),
+    };
   }
 
   private createAsteroid(

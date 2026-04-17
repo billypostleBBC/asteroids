@@ -37,6 +37,7 @@ export type AsteroidsTestApi = {
     x?: number;
     y?: number;
   }) => void;
+  setElapsedMs: (elapsedMs: number) => void;
   setLeaderboardEntries: (entries: Array<{ initials: string; score: number }>) => void;
   setLeaderboardFailure: (patch: { failLoad?: boolean; failSubmit?: boolean }) => void;
   queueProjectileHit: (points?: number) => void;
@@ -115,6 +116,9 @@ export function registerTestApi({
 
       bindings.dragPointerId = active ? 1 : null;
       bindings.dragPosition = active ? { x, y } : null;
+    },
+    setElapsedMs: (elapsedMs: number) => {
+      getInternalState(controller).elapsedMs = Math.max(0, elapsedMs);
     },
     setLeaderboardEntries: (entries) => {
       resetTestLeaderboard(entries);

@@ -268,6 +268,14 @@ let pendingLaunch = false;
 let focusPaused = false;
 let escapePaused = false;
 
+const syncGameReady = (): boolean => {
+  if (!gameReady && phaserGame.isBooted) {
+    gameReady = true;
+  }
+
+  return gameReady;
+};
+
 const startGameplayScene = (): void => {
   phaserGame.scene.stop(SCENE_KEYS.MENU);
   phaserGame.scene.start(SCENE_KEYS.GAME);
@@ -283,7 +291,7 @@ const syncPauseState = (): void => {
 };
 
 const flushPendingLaunch = (): void => {
-  if (!gameReady || !menuReady || !pendingLaunch || launchQueued) {
+  if (!syncGameReady() || !menuReady || !pendingLaunch || launchQueued) {
     return;
   }
 
@@ -361,7 +369,7 @@ if (import.meta.env.MODE === 'test') {
     audio,
     controller,
     input,
-    isReady: () => gameReady && menuReady,
+    isReady: () => syncGameReady() && menuReady,
     refreshLeaderboard,
     root: shell,
   });

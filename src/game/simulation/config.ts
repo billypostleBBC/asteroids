@@ -44,6 +44,9 @@ export const SHIP_DAMAGE_COOLDOWN_MS = 750;
 export const LASER_SPEED = 720;
 export const LASER_TTL_MS = 1400;
 export const LASER_RADIUS = 8;
+export const GAMEPLAY_DIFFICULTY_RAMP_SCORE = 200;
+export const GAMEPLAY_SPEED_OVERCLOCK_END_SCORE = 800;
+export const GAMEPLAY_SPEED_OVERCLOCK_MAX = 1.2;
 
 export const ATTRACT_MODE_DIRECTOR: SpawnDirectorConfig = {
   intervalMs: {

@@ -8,6 +8,8 @@ export class DecorativeField {
 
   private readonly nearLayer: Phaser.GameObjects.TileSprite;
 
+  private lastElapsedMs: number | null = null;
+
   constructor(scene: Phaser.Scene) {
     const textureDisplayScale = 1 / getTextureRenderScale();
 
@@ -27,12 +29,19 @@ export class DecorativeField {
 
   render(snapshot: GameSnapshot, reducedMotion: boolean): void {
     const drift = reducedMotion ? 0.18 : 0.55 + snapshot.spawnIntensity * 0.5;
-    const elapsed = snapshot.elapsedMs / 1000;
+    const elapsedDeltaMs =
+      this.lastElapsedMs === null ||
+      snapshot.elapsedMs < this.lastElapsedMs ||
+      snapshot.elapsedMs - this.lastElapsedMs > 250
+        ? 0
+        : snapshot.elapsedMs - this.lastElapsedMs;
+    const elapsedDeltaSeconds = elapsedDeltaMs / 1000;
 
-    this.farLayer.tilePositionX = elapsed * 8 * drift;
-    this.farLayer.tilePositionY = elapsed * 12 * drift;
-    this.nearLayer.tilePositionX = -elapsed * 16 * drift;
-    this.nearLayer.tilePositionY = elapsed * 22 * drift;
+    this.farLayer.tilePositionX += elapsedDeltaSeconds * 8 * drift;
+    this.farLayer.tilePositionY += elapsedDeltaSeconds * 12 * drift;
+    this.nearLayer.tilePositionX -= elapsedDeltaSeconds * 16 * drift;
+    this.nearLayer.tilePositionY += elapsedDeltaSeconds * 22 * drift;
+    this.lastElapsedMs = snapshot.elapsedMs;
   }
 
   resize(width: number, height: number): void {

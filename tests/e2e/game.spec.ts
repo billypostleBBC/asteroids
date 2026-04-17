@@ -566,6 +566,39 @@ test('keeps life rewards capped at three on exact 100, 200, and 300 point thresh
   }
 });
 
+test('gameplay difficulty ramps from score progression instead of elapsed time', async ({
+  page,
+}) => {
+  await launchWithButton(page);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.freezeSpawns();
+    window.__ASTEROIDS_TEST_API__?.clearEntities();
+    window.__ASTEROIDS_TEST_API__?.setElapsedMs(180_000);
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      score: 0,
+    });
+  });
+
+  await expect.poll(async () => (await readSnapshot(page)).spawnIntensity).toBe(0);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      score: 100,
+    });
+  });
+
+  await expect.poll(async () => (await readSnapshot(page)).spawnIntensity).toBe(0.5);
+
+  await page.evaluate(() => {
+    window.__ASTEROIDS_TEST_API__?.setScoreState({
+      score: 200,
+    });
+  });
+
+  await expect.poll(async () => (await readSnapshot(page)).spawnIntensity).toBe(1);
+});
+
 test('ship hit and final ship destruction trigger different explosion cues', async ({
   page,
 }) => {
